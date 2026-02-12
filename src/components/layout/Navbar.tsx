@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Search, ShoppingBag, User, Heart, Sparkles } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, Search, ShoppingBag, User, Heart, Sparkles, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -18,6 +21,11 @@ const Navbar = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -56,19 +64,33 @@ const Navbar = () => {
             <Button variant="ghost" size="icon">
               <Search className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <Heart className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold text-accent-foreground text-[10px] rounded-full flex items-center justify-center font-semibold">
-                3
-              </span>
-            </Button>
-            <Button variant="gold" size="sm" className="ml-2">
-              <User className="w-4 h-4" />
-              Sign In
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to="/account/wishlist">
+                    <Heart className="w-5 h-5" />
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to="/account/cart">
+                    <ShoppingBag className="w-5 h-5" />
+                  </Link>
+                </Button>
+                <Button variant="gold" size="sm" className="ml-2" asChild>
+                  <Link to="/account">
+                    <User className="w-4 h-4" />
+                    Account
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <Button variant="gold" size="sm" className="ml-2" asChild>
+                <Link to="/sign-in">
+                  <User className="w-4 h-4" />
+                  Sign In
+                </Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -102,22 +124,33 @@ const Navbar = () => {
                 </Link>
               ))}
               <div className="flex items-center gap-2 px-4 pt-4 mt-2 border-t border-border/50">
-                <Button variant="ghost" size="icon">
-                  <Search className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Heart className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="relative">
-                  <ShoppingBag className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold text-accent-foreground text-[10px] rounded-full flex items-center justify-center font-semibold">
-                    3
-                  </span>
-                </Button>
-                <Button variant="gold" size="sm" className="ml-auto">
-                  <User className="w-4 h-4" />
-                  Sign In
-                </Button>
+                {user ? (
+                  <>
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link to="/account/wishlist" onClick={() => setIsOpen(false)}>
+                        <Heart className="w-5 h-5" />
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link to="/account/cart" onClick={() => setIsOpen(false)}>
+                        <ShoppingBag className="w-5 h-5" />
+                      </Link>
+                    </Button>
+                    <Button variant="gold" size="sm" className="ml-auto" asChild>
+                      <Link to="/account" onClick={() => setIsOpen(false)}>
+                        <User className="w-4 h-4" />
+                        Account
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="gold" size="sm" className="ml-auto" asChild>
+                    <Link to="/sign-in" onClick={() => setIsOpen(false)}>
+                      <User className="w-4 h-4" />
+                      Sign In
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

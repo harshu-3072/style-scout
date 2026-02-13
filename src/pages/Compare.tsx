@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Star, ExternalLink, TrendingDown, Heart, Filter, AlertCircle } from "lucide-react";
+import { Search, Star, ExternalLink, TrendingDown, Heart, ShoppingBag, Filter, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useProductActions } from "@/hooks/use-product-actions";
 
 interface PriceEntry {
   platform: string;
@@ -27,6 +28,7 @@ const Compare = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<Product[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const { addToWishlist, addToCart } = useProductActions();
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -214,6 +216,24 @@ const Compare = () => {
                                   Buy Now
                                 </Button>
                               </a>
+                              <div className="flex gap-2 mt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => addToWishlist({ name: product.name, price: p.price, image: product.image, platform: p.platform, url: p.link })}
+                                >
+                                  <Heart className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => addToCart({ name: product.name, price: p.price, image: product.image, platform: p.platform, url: p.link })}
+                                >
+                                  <ShoppingBag className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>

@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, X, Search, ExternalLink, Star, Sparkles } from "lucide-react";
+import { Camera, Upload, X, Search, ExternalLink, Star, Sparkles, Heart, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useProductActions } from "@/hooks/use-product-actions";
 
 interface DetectedItem {
   type: string;
@@ -36,6 +37,7 @@ const SnapSearch = () => {
   const [detectedItem, setDetectedItem] = useState<DetectedItem | null>(null);
   const [results, setResults] = useState<Product[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToWishlist, addToCart } = useProductActions();
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -251,6 +253,24 @@ const SnapSearch = () => {
                         Search on {product.platform}
                       </Button>
                     </a>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => addToWishlist({ name: product.name, price: product.price, platform: product.platform, url: getProductLink(product) })}
+                      >
+                        <Heart className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => addToCart({ name: product.name, price: product.price, platform: product.platform, url: getProductLink(product) })}
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

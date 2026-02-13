@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ShoppingBag, Trash2, Plus, Minus } from "lucide-react";
@@ -7,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const CartPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ const CartPage = () => {
             <span className="text-lg font-semibold">Total</span>
             <span className="text-xl font-bold text-gold">₹{total.toFixed(2)}</span>
           </div>
-          <Button variant="gold" size="lg" className="w-full">
+          <Button variant="gold" size="lg" className="w-full" onClick={() => navigate("/checkout")}>
             Proceed to Checkout
           </Button>
         </div>

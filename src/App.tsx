@@ -14,6 +14,7 @@ import Compare from "./pages/Compare";
 import AIStylist from "./pages/AIStylist";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
 import ProfilePage from "./pages/account/ProfilePage";
 import WishlistPage from "./pages/account/WishlistPage";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/ai-stylist" element={<AIStylist />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/sign-up" element={<SignUp />} />
+              <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>}>
                 <Route index element={<ProfilePage />} />
                 <Route path="wishlist" element={<WishlistPage />} />

@@ -95,6 +95,91 @@ export type Database = {
         }
         Relationships: []
       }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_image: string | null
+          product_name: string
+          product_platform: string | null
+          product_price: number
+          product_url: string | null
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_image?: string | null
+          product_name: string
+          product_platform?: string | null
+          product_price: number
+          product_url?: string | null
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_image?: string | null
+          product_name?: string
+          product_platform?: string | null
+          product_price?: number
+          product_url?: string | null
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          address_id: string | null
+          created_at: string
+          id: string
+          payment_method: string
+          status: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_id?: string | null
+          created_at?: string
+          id?: string
+          payment_method?: string
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_id?: string | null
+          created_at?: string
+          id?: string
+          payment_method?: string
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_address_id_fkey"
+            columns: ["address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

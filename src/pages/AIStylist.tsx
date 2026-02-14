@@ -1,21 +1,43 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, User, Bot, Upload, Star, ExternalLink, Shirt, Footprints } from "lucide-react";
+import { Sparkles, Send, User, Bot, Upload, Heart, ShoppingBag, X, Image } from "lucide-react";
+import { useProductActions } from "@/hooks/use-product-actions";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: number;
   role: "user" | "assistant";
   content: string;
-  outfits?: Outfit[];
+  imagePreview?: string;
 }
 
-interface Outfit {
-  id: number;
+interface ParsedOutfit {
   name: string;
-  image: string;
   items: { type: string; name: string; price: number; platform: string }[];
-  style: string;
+}
+
+function parseOutfits(content: string): ParsedOutfit[] {
+  const outfits: ParsedOutfit[] = [];
+  const regex = /:::outfit\[(.+?)\]\n([\s\S]*?):::/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const name = match[1];
+    const items: ParsedOutfit["items"] = [];
+    const lines = match[2].trim().split("\n");
+    for (const line of lines) {
+      const m = line.match(/^-\s*(\w+):\s*(.+?)\s*\|\s*₹([\d,]+)\s*\|\s*(.+)$/);
+      if (m) {
+        items.push({ type: m[1], name: m[2].trim(), price: parseInt(m[3].replace(/,/g, "")), platform: m[4].trim() });
+      }
+    }
+    if (items.length > 0) outfits.push({ name, items });
+  }
+  return outfits;
+}
+
+function stripOutfitBlocks(content: string): string {
+  return content.replace(/:::outfit\[.+?\]\n[\s\S]*?:::/g, "").trim();
 }
 
 const AIStylist = () => {
@@ -23,51 +45,16 @@ const AIStylist = () => {
     {
       id: 1,
       role: "assistant",
-      content: "Hi! I'm your personal AI Fashion Stylist ✨ I can help you with:\n\n• Outfit recommendations based on your preferences\n• Style suggestions for specific occasions\n• Finding more stylish alternatives to outfits you like\n• Complete look suggestions (Top + Bottom + Footwear + Accessories)\n\nHow can I help you look amazing today?",
+      content:
+        "Hi! I'm **StyleGenie** — your personal AI Fashion Stylist ✨\n\nI can help you with:\n\n• **Outfit recommendations** for any occasion\n• **Style analysis** — upload a photo and I'll suggest how to wear it\n• **Premium alternatives** to outfits you already own\n• **Complete looks** (Top + Bottom + Footwear + Accessories)\n\nTell me about your style, an occasion, or upload a photo to get started!",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const mockOutfits: Outfit[] = [
-    {
-      id: 1,
-      name: "Smart Casual Friday",
-      image: "https://images.unsplash.com/photo-1516826957135-700dedea698c?w=400",
-      items: [
-        { type: "Top", name: "Navy Cotton Blazer", price: 3499, platform: "Myntra" },
-        { type: "Bottom", name: "Beige Chinos", price: 1999, platform: "Amazon" },
-        { type: "Footwear", name: "Brown Loafers", price: 2499, platform: "Ajio" },
-        { type: "Accessory", name: "Leather Watch", price: 1499, platform: "Flipkart" },
-      ],
-      style: "Smart Casual",
-    },
-    {
-      id: 2,
-      name: "Weekend Brunch Look",
-      image: "https://images.unsplash.com/photo-1502716119720-b23a93e5fe1b?w=400",
-      items: [
-        { type: "Top", name: "White Linen Shirt", price: 1499, platform: "Myntra" },
-        { type: "Bottom", name: "Light Blue Jeans", price: 2299, platform: "Levi's" },
-        { type: "Footwear", name: "White Sneakers", price: 3999, platform: "Amazon" },
-        { type: "Accessory", name: "Sunglasses", price: 999, platform: "Myntra" },
-      ],
-      style: "Casual Chic",
-    },
-    {
-      id: 3,
-      name: "Evening Date Night",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-      items: [
-        { type: "Top", name: "Black Turtle Neck", price: 1299, platform: "H&M" },
-        { type: "Bottom", name: "Dark Slim Jeans", price: 2499, platform: "Myntra" },
-        { type: "Footwear", name: "Chelsea Boots", price: 3499, platform: "Amazon" },
-        { type: "Accessory", name: "Silver Bracelet", price: 799, platform: "Ajio" },
-      ],
-      style: "Elegant Casual",
-    },
-  ];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToWishlist, addToCart } = useProductActions();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,158 +64,162 @@ const AIStylist = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setPendingImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSend = async () => {
+    const text = inputValue.trim();
+    if (!text && !pendingImage) return;
 
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: Date.now(),
       role: "user",
-      content: inputValue,
+      content: text || "Analyze this outfit and suggest styling ideas",
+      imagePreview: pendingImage || undefined,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue("");
+    const sentImage = pendingImage;
+    setPendingImage(null);
     setIsTyping(true);
 
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: messages.length + 2,
-        role: "assistant",
-        content: "Based on your preferences, here are some outfit recommendations that would look amazing on you! Each outfit is carefully curated with pieces from top brands at the best prices. 💫",
-        outfits: mockOutfits,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+    // Build chat history for the API
+    const chatHistory = updatedMessages
+      .filter((m) => m.id !== 1) // skip initial greeting
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+        ...(m.imagePreview ? { imageBase64: m.imagePreview } : {}),
+      }));
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-stylist`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: chatHistory }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Request failed" }));
+        throw new Error(err.error || "Request failed");
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+      let textBuffer = "";
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last?.role === "assistant" && last.id === -1) {
+                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
+                }
+                return [...prev, { id: -1, role: "assistant", content: assistantContent }];
+              });
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Finalize assistant message with a real ID
+      setMessages((prev) =>
+        prev.map((m) => (m.id === -1 ? { ...m, id: Date.now() } : m))
+      );
+    } catch (err: any) {
+      console.error("AI Stylist error:", err);
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: "assistant", content: `Sorry, something went wrong: ${err.message}. Please try again.` },
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
   const quickPrompts = [
     "Suggest a smart casual outfit for office",
     "What should I wear for a date night?",
-    "Help me find a stylish summer look",
-    "I need an outfit for a wedding reception",
+    "Suggest a stylish summer look under ₹5000",
+    "Help me style a black blazer",
   ];
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Hero Section */}
-      <section className="py-12 bg-gradient-hero border-b border-border">
+      {/* Hero */}
+      <section className="py-10 bg-gradient-hero border-b border-border">
         <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/30 mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/30 mb-3">
             <Sparkles className="w-4 h-4 text-gold" />
-            <span className="text-sm font-medium">AI-Powered Styling</span>
+            <span className="text-sm font-medium">AI-Powered Personal Stylist</span>
           </div>
-          <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            Your Personal <span className="text-gradient-gold">AI Fashion Stylist</span>
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-3">
+            Your Personal <span className="text-gradient-gold">StyleGenie</span>
           </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Get personalized outfit recommendations, styling tips, and complete look suggestions tailored just for you.
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+            Get real AI-powered outfit recommendations, style your existing wardrobe, or upload a photo for instant analysis.
           </p>
         </div>
       </section>
 
-      {/* Chat Section */}
-      <section className="flex-1 py-8">
-        <div className="container mx-auto px-4 max-w-4xl">
-          {/* Messages */}
-          <div className="space-y-6 mb-8 min-h-[400px]">
+      {/* Chat */}
+      <section className="flex-1 py-6">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="space-y-5 mb-6 min-h-[400px]">
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-4 ${message.role === "user" ? "flex-row-reverse" : ""}`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    message.role === "user" ? "bg-gold" : "bg-primary"
-                  }`}
-                >
-                  {message.role === "user" ? (
-                    <User className="w-5 h-5 text-accent-foreground" />
-                  ) : (
-                    <Bot className="w-5 h-5 text-primary-foreground" />
-                  )}
-                </div>
-                <div
-                  className={`flex-1 max-w-[80%] ${
-                    message.role === "user" ? "text-right" : ""
-                  }`}
-                >
-                  <div
-                    className={`inline-block p-4 rounded-2xl ${
-                      message.role === "user"
-                        ? "bg-gold text-accent-foreground"
-                        : "bg-secondary"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap text-left">{message.content}</p>
-                  </div>
-
-                  {/* Outfit Cards */}
-                  {message.outfits && (
-                    <div className="grid sm:grid-cols-3 gap-4 mt-4">
-                      {message.outfits.map((outfit) => (
-                        <div
-                          key={outfit.id}
-                          className="rounded-xl bg-card border border-border overflow-hidden shadow-card text-left"
-                        >
-                          <div className="aspect-[3/4] overflow-hidden">
-                            <img
-                              src={outfit.image}
-                              alt={outfit.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-gold/10 text-gold">
-                                {outfit.style}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-gold fill-gold" />
-                                <span className="text-xs font-medium">4.8</span>
-                              </div>
-                            </div>
-                            <h4 className="font-semibold text-sm mb-3">{outfit.name}</h4>
-                            <div className="space-y-2 mb-4">
-                              {outfit.items.slice(0, 2).map((item, i) => (
-                                <div key={i} className="flex items-center justify-between text-xs">
-                                  <span className="text-muted-foreground flex items-center gap-1">
-                                    {item.type === "Top" ? <Shirt className="w-3 h-3" /> : <Footprints className="w-3 h-3" />}
-                                    {item.name}
-                                  </span>
-                                  <span className="font-medium">₹{item.price}</span>
-                                </div>
-                              ))}
-                              {outfit.items.length > 2 && (
-                                <span className="text-xs text-muted-foreground">
-                                  +{outfit.items.length - 2} more items
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="font-display font-bold">
-                                ₹{outfit.items.reduce((sum, item) => sum + item.price, 0).toLocaleString()}
-                              </span>
-                              <Button variant="gold" size="sm">
-                                <ExternalLink className="w-3 h-3" />
-                                Shop Look
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <MessageBubble key={message.id} message={message} addToWishlist={addToWishlist} addToCart={addToCart} />
             ))}
 
-            {isTyping && (
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-primary-foreground" />
+            {isTyping && messages[messages.length - 1]?.role !== "assistant" && (
+              <div className="flex gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="p-4 rounded-2xl bg-secondary">
+                <div className="p-3 rounded-2xl bg-secondary">
                   <div className="flex gap-1">
                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: "0.2s" }} />
@@ -241,35 +232,58 @@ const AIStylist = () => {
           </div>
 
           {/* Quick Prompts */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {quickPrompts.map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => setInputValue(prompt)}
-                className="px-4 py-2 rounded-full bg-secondary text-sm font-medium hover:bg-gold/10 hover:text-gold transition-colors"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+          {messages.length <= 2 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => setInputValue(prompt)}
+                  className="px-4 py-2 rounded-full bg-secondary text-sm font-medium hover:bg-gold/10 hover:text-gold transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Input Area */}
-          <div className="flex gap-4">
-            <Button variant="outline" size="icon" className="flex-shrink-0 h-12 w-12">
-              <Upload className="w-5 h-5" />
+          {/* Pending Image Preview */}
+          {pendingImage && (
+            <div className="mb-3 relative inline-block">
+              <img src={pendingImage} alt="Upload preview" className="h-20 rounded-lg border border-border" />
+              <button
+                onClick={() => setPendingImage(null)}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="flex gap-3">
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            <Button
+              variant="outline"
+              size="icon"
+              className="flex-shrink-0 h-12 w-12"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Image className="w-5 h-5" />
             </Button>
             <div className="relative flex-1">
               <Input
-                placeholder="Describe your style preferences or ask for outfit suggestions..."
+                placeholder="Ask about outfits, styling tips, or upload a photo..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 className="h-12 pr-12"
+                disabled={isTyping}
               />
               <Button
                 variant="gold"
                 size="icon"
                 onClick={handleSend}
+                disabled={isTyping && !inputValue.trim() && !pendingImage}
                 className="absolute right-1 top-1 h-10 w-10"
               >
                 <Send className="w-4 h-4" />
@@ -281,5 +295,97 @@ const AIStylist = () => {
     </div>
   );
 };
+
+function MessageBubble({
+  message,
+  addToWishlist,
+  addToCart,
+}: {
+  message: Message;
+  addToWishlist: (p: any) => void;
+  addToCart: (p: any) => void;
+}) {
+  const isUser = message.role === "user";
+  const outfits = !isUser ? parseOutfits(message.content) : [];
+  const textContent = !isUser ? stripOutfitBlocks(message.content) : message.content;
+
+  return (
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+          isUser ? "bg-gold" : "bg-primary"
+        }`}
+      >
+        {isUser ? <User className="w-4 h-4 text-accent-foreground" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
+      </div>
+      <div className={`flex-1 max-w-[85%] ${isUser ? "text-right" : ""}`}>
+        {/* Image attachment */}
+        {message.imagePreview && (
+          <div className={`mb-2 ${isUser ? "flex justify-end" : ""}`}>
+            <img src={message.imagePreview} alt="Uploaded" className="h-40 rounded-xl border border-border object-cover" />
+          </div>
+        )}
+
+        {textContent && (
+          <div className={`inline-block p-4 rounded-2xl text-left ${isUser ? "bg-gold text-accent-foreground" : "bg-secondary"}`}>
+            {isUser ? (
+              <p className="whitespace-pre-wrap">{textContent}</p>
+            ) : (
+              <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-li:my-0.5 prose-headings:mb-2 prose-headings:mt-3">
+                <ReactMarkdown>{textContent}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Outfit Cards */}
+        {outfits.length > 0 && (
+          <div className="grid sm:grid-cols-2 gap-3 mt-3">
+            {outfits.map((outfit, oi) => (
+              <div key={oi} className="rounded-xl bg-card border border-border p-4 text-left shadow-card">
+                <h4 className="font-display font-semibold text-sm mb-3">{outfit.name}</h4>
+                <div className="space-y-2 mb-3">
+                  {outfit.items.map((item, ii) => (
+                    <div key={ii} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        <span className="font-medium text-foreground">{item.type}:</span> {item.name}
+                      </span>
+                      <span className="font-medium whitespace-nowrap ml-2">₹{item.price.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <span className="font-display font-bold text-sm">
+                    Total: ₹{outfit.items.reduce((s, i) => s + i.price, 0).toLocaleString()}
+                  </span>
+                  <div className="flex gap-1">
+                    {outfit.items.map((item, ii) => (
+                      <div key={ii} className="flex gap-1">
+                        <button
+                          onClick={() => addToWishlist({ name: item.name, price: item.price, platform: item.platform })}
+                          className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+                          title={`Save ${item.name}`}
+                        >
+                          <Heart className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => addToCart({ name: item.name, price: item.price, platform: item.platform })}
+                          className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+                          title={`Add ${item.name} to cart`}
+                        >
+                          <ShoppingBag className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default AIStylist;

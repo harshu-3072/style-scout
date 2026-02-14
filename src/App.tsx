@@ -21,6 +21,7 @@ import WishlistPage from "./pages/account/WishlistPage";
 import CartPage from "./pages/account/CartPage";
 import OrdersPage from "./pages/account/OrdersPage";
 import AddressesPage from "./pages/account/AddressesPage";
+import WardrobePage from "./pages/account/WardrobePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>}>
                 <Route index element={<ProfilePage />} />
+                <Route path="wardrobe" element={<WardrobePage />} />
                 <Route path="wishlist" element={<WishlistPage />} />
                 <Route path="cart" element={<CartPage />} />
                 <Route path="orders" element={<OrdersPage />} />

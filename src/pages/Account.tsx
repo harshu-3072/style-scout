@@ -3,10 +3,11 @@ import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { User, Heart, ShoppingBag, MapPin, Package, LogOut } from "lucide-react";
+import { User, Heart, ShoppingBag, MapPin, Package, LogOut, Shirt } from "lucide-react";
 
 const accountLinks = [
   { name: "Profile", path: "/account", icon: User },
+  { name: "Wardrobe", path: "/account/wardrobe", icon: Shirt },
   { name: "Wishlist", path: "/account/wishlist", icon: Heart },
   { name: "Cart", path: "/account/cart", icon: ShoppingBag },
   { name: "Orders", path: "/account/orders", icon: Package },

@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, User, Bot, Upload, Heart, ShoppingBag, X, Image } from "lucide-react";
+import { Sparkles, Send, User, Bot, Upload, Heart, ShoppingBag, X, Image, Shirt } from "lucide-react";
 import { useProductActions } from "@/hooks/use-product-actions";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
+import { Link } from "react-router-dom";
 
 interface Message {
   id: number;
@@ -55,6 +59,19 @@ const AIStylist = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addToWishlist, addToCart } = useProductActions();
+  const { user } = useAuth();
+
+  const { data: wardrobeItems = [] } = useQuery({
+    queryKey: ["wardrobe", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wardrobe_items" as any)
+        .select("name, category, color, brand")
+        .eq("user_id", user!.id);
+      return (data || []) as unknown as { name: string; category: string; color: string | null; brand: string | null }[];
+    },
+    enabled: !!user,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -110,7 +127,7 @@ const AIStylist = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: chatHistory }),
+        body: JSON.stringify({ messages: chatHistory, wardrobe: wardrobeItems.length > 0 ? wardrobeItems : undefined }),
       });
 
       if (!resp.ok) {
@@ -181,12 +198,19 @@ const AIStylist = () => {
     }
   };
 
-  const quickPrompts = [
-    "Suggest a smart casual outfit for office",
-    "What should I wear for a date night?",
-    "Suggest a stylish summer look under ₹5000",
-    "Help me style a black blazer",
-  ];
+  const quickPrompts = wardrobeItems.length > 0
+    ? [
+        "Style an outfit from my wardrobe for office",
+        "What can I wear from my closet for a date night?",
+        "Suggest outfits using my existing clothes",
+        "What's missing from my wardrobe?",
+      ]
+    : [
+        "Suggest a smart casual outfit for office",
+        "What should I wear for a date night?",
+        "Suggest a stylish summer look under ₹5000",
+        "Help me style a black blazer",
+      ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -203,6 +227,16 @@ const AIStylist = () => {
           <p className="text-muted-foreground max-w-xl mx-auto text-sm">
             Get real AI-powered outfit recommendations, style your existing wardrobe, or upload a photo for instant analysis.
           </p>
+          {user && wardrobeItems.length > 0 && (
+            <Link to="/account/wardrobe" className="inline-flex items-center gap-1.5 mt-3 text-xs text-gold hover:underline">
+              <Shirt className="w-3.5 h-3.5" /> {wardrobeItems.length} items in your wardrobe — AI will use them
+            </Link>
+          )}
+          {user && wardrobeItems.length === 0 && (
+            <Link to="/account/wardrobe" className="inline-flex items-center gap-1.5 mt-3 text-xs text-muted-foreground hover:text-gold transition-colors">
+              <Shirt className="w-3.5 h-3.5" /> Add clothes to your wardrobe for personalized suggestions
+            </Link>
+          )}
         </div>
       </section>
 

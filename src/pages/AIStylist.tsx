@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, User, Bot, Upload, Heart, ShoppingBag, X, Image, Shirt } from "lucide-react";
+import { Sparkles, Send, User, Bot, Upload, Heart, ShoppingBag, X, Image, Shirt, Bookmark, BookmarkCheck } from "lucide-react";
 import { useProductActions } from "@/hooks/use-product-actions";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
@@ -60,6 +61,26 @@ const AIStylist = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addToWishlist, addToCart } = useProductActions();
   const { user } = useAuth();
+  const [savedOutfitNames, setSavedOutfitNames] = useState<Set<string>>(new Set());
+
+  const handleSaveLook = async (outfit: ParsedOutfit) => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to save looks.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error } = await supabase.from("saved_looks" as any).insert({
+        user_id: user.id,
+        name: outfit.name,
+        items: outfit.items,
+      } as any);
+      if (error) throw error;
+      setSavedOutfitNames((prev) => new Set(prev).add(outfit.name));
+      toast({ title: "Look saved!", description: `"${outfit.name}" added to your saved looks.` });
+    } catch (err: any) {
+      toast({ title: "Failed to save", description: err.message, variant: "destructive" });
+    }
+  };
 
   const { data: wardrobeItems = [] } = useQuery({
     queryKey: ["wardrobe", user?.id],
@@ -245,7 +266,7 @@ const AIStylist = () => {
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="space-y-5 mb-6 min-h-[400px]">
             {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} addToWishlist={addToWishlist} addToCart={addToCart} />
+              <MessageBubble key={message.id} message={message} addToWishlist={addToWishlist} addToCart={addToCart} onSaveLook={handleSaveLook} />
             ))}
 
             {isTyping && messages[messages.length - 1]?.role !== "assistant" && (
@@ -334,10 +355,12 @@ function MessageBubble({
   message,
   addToWishlist,
   addToCart,
+  onSaveLook,
 }: {
   message: Message;
   addToWishlist: (p: any) => void;
   addToCart: (p: any) => void;
+  onSaveLook: (outfit: ParsedOutfit) => void;
 }) {
   const isUser = message.role === "user";
   const outfits = !isUser ? parseOutfits(message.content) : [];
@@ -393,6 +416,13 @@ function MessageBubble({
                     Total: ₹{outfit.items.reduce((s, i) => s + i.price, 0).toLocaleString()}
                   </span>
                   <div className="flex gap-1">
+                    <button
+                      onClick={() => onSaveLook(outfit)}
+                      className="p-1.5 rounded-md hover:bg-gold/10 hover:text-gold transition-colors"
+                      title="Save this look"
+                    >
+                      <Bookmark className="w-3.5 h-3.5" />
+                    </button>
                     {outfit.items.map((item, ii) => (
                       <div key={ii} className="flex gap-1">
                         <button

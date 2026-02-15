@@ -216,6 +216,33 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_looks: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          name: string
+          source_message: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name: string
+          source_message?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name?: string
+          source_message?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       wardrobe_items: {
         Row: {
           brand: string | null

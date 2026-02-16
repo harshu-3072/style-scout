@@ -3,6 +3,7 @@ import { Heart, ShoppingBag, Bookmark, BookmarkCheck, ExternalLink, Tag, BarChar
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PriceCompareModal } from "./PriceCompareModal";
+import { OutfitImagePreview } from "./OutfitImagePreview";
 
 export interface OutfitItem {
   type: string;
@@ -183,6 +184,11 @@ export function OutfitCard({ outfit, onSaveLook, addToWishlist, addToCart, isSav
               </div>
             );
           })}
+        </div>
+
+        {/* AI Image Preview */}
+        <div className="mb-3">
+          <OutfitImagePreview outfit={outfit} />
         </div>
 
         {/* Footer */}

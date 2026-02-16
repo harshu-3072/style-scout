@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, User, Bot, Upload, Heart, ShoppingBag, X, Image, Shirt, Bookmark, BookmarkCheck } from "lucide-react";
+import { Sparkles, Send, User, Bot, X, Image, Shirt } from "lucide-react";
 import { useProductActions } from "@/hooks/use-product-actions";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
+import { OutfitCard, type ParsedOutfit } from "@/components/ai-stylist/OutfitCard";
 
 interface Message {
   id: number;
@@ -17,10 +18,7 @@ interface Message {
   imagePreview?: string;
 }
 
-interface ParsedOutfit {
-  name: string;
-  items: { type: string; name: string; price: number; platform: string }[];
-}
+// ParsedOutfit is now imported from OutfitCard
 
 function parseOutfits(content: string): ParsedOutfit[] {
   const outfits: ParsedOutfit[] = [];
@@ -399,51 +397,13 @@ function MessageBubble({
         {outfits.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-3 mt-3">
             {outfits.map((outfit, oi) => (
-              <div key={oi} className="rounded-xl bg-card border border-border p-4 text-left shadow-card">
-                <h4 className="font-display font-semibold text-sm mb-3">{outfit.name}</h4>
-                <div className="space-y-2 mb-3">
-                  {outfit.items.map((item, ii) => (
-                    <div key={ii} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        <span className="font-medium text-foreground">{item.type}:</span> {item.name}
-                      </span>
-                      <span className="font-medium whitespace-nowrap ml-2">₹{item.price.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between border-t border-border pt-3">
-                  <span className="font-display font-bold text-sm">
-                    Total: ₹{outfit.items.reduce((s, i) => s + i.price, 0).toLocaleString()}
-                  </span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => onSaveLook(outfit)}
-                      className="p-1.5 rounded-md hover:bg-gold/10 hover:text-gold transition-colors"
-                      title="Save this look"
-                    >
-                      <Bookmark className="w-3.5 h-3.5" />
-                    </button>
-                    {outfit.items.map((item, ii) => (
-                      <div key={ii} className="flex gap-1">
-                        <button
-                          onClick={() => addToWishlist({ name: item.name, price: item.price, platform: item.platform })}
-                          className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-                          title={`Save ${item.name}`}
-                        >
-                          <Heart className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => addToCart({ name: item.name, price: item.price, platform: item.platform })}
-                          className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-                          title={`Add ${item.name} to cart`}
-                        >
-                          <ShoppingBag className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <OutfitCard
+                key={oi}
+                outfit={outfit}
+                onSaveLook={onSaveLook}
+                addToWishlist={addToWishlist}
+                addToCart={addToCart}
+              />
             ))}
           </div>
         )}

@@ -12,6 +12,7 @@ import Contact from "./pages/Contact";
 import SnapSearch from "./pages/SnapSearch";
 import Compare from "./pages/Compare";
 import AIStylist from "./pages/AIStylist";
+import AIDesigner from "./pages/AIDesigner";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Checkout from "./pages/Checkout";

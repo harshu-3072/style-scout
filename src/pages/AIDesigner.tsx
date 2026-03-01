@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import OutfitCard from "@/components/ai-stylist/OutfitCard";
-import OutfitImagePreview from "@/components/ai-stylist/OutfitImagePreview";
+import { OutfitCard } from "@/components/ai-stylist/OutfitCard";
+import { OutfitImagePreview } from "@/components/ai-stylist/OutfitImagePreview";
 import ReactMarkdown from "react-markdown";
 
 const STYLES = [

@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
-import { Palette, Sparkles, Sun, Snowflake, CloudRain, Leaf, Wand2, ShoppingBag, RotateCcw, ChevronRight } from "lucide-react";
+import { Palette, Sparkles, Sun, Snowflake, CloudRain, Leaf, Wand2, RotateCcw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { OutfitCard } from "@/components/ai-stylist/OutfitCard";
+import { useProductActions } from "@/hooks/use-product-actions";
+import { OutfitCard, type ParsedOutfit } from "@/components/ai-stylist/OutfitCard";
 import { OutfitImagePreview } from "@/components/ai-stylist/OutfitImagePreview";
 import ReactMarkdown from "react-markdown";
 

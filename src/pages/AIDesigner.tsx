@@ -91,7 +91,12 @@ export default function AIDesigner() {
   const [responseText, setResponseText] = useState("");
   const [step, setStep] = useState(1);
   const { toast } = useToast();
+  const { addToWishlist, addToCart } = useProductActions();
   const abortRef = useRef<AbortController | null>(null);
+
+  const handleSaveLook = (outfit: ParsedOutfit) => {
+    toast({ title: "Look saved! 🎨" });
+  };
 
   const toggleColor = (id: string) => {
     setSelectedColors((prev) =>

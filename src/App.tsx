@@ -12,6 +12,7 @@ import Contact from "./pages/Contact";
 import SnapSearch from "./pages/SnapSearch";
 import Compare from "./pages/Compare";
 import AIStylist from "./pages/AIStylist";
+import AIDesigner from "./pages/AIDesigner";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Checkout from "./pages/Checkout";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/snap-search" element={<SnapSearch />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/ai-stylist" element={<AIStylist />} />
+              <Route path="/ai-designer" element={<AIDesigner />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/sign-up" element={<SignUp />} />
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />

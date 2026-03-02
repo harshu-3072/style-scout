@@ -19,15 +19,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+        // If token refresh fails, sign out cleanly to prevent infinite retry loops
+        if (event === "TOKEN_REFRESHED" && !session) {
+          await supabase.auth.signOut();
+        }
+      }
+    );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Clear stale session on error
+        console.warn("Session retrieval failed, clearing auth state:", error.message);
+        setSession(null);
+        setUser(null);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
     });
 

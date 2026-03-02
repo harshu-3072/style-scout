@@ -188,13 +188,13 @@
 
 @layer utilities {
   .glass {
-    background: hsl(0 0% 100% / 0.8);
+    background: hsl(var(--background) / 0.8);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
 
   .glass-dark {
-    background: hsl(0 0% 8% / 0.85);
+    background: hsl(var(--background) / 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }

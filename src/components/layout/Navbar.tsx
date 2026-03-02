@@ -145,6 +145,9 @@ const Navbar = () => {
                 </Link>
               ))}
               <div className="flex items-center gap-2 px-4 pt-4 mt-2 border-t border-border/50">
+                <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} aria-label="Toggle dark mode">
+                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </Button>
                 {user ? (
                   <>
                     <Button variant="ghost" size="icon" asChild>

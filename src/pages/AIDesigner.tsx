@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Palette, Sparkles, Sun, Snowflake, CloudRain, Leaf, Wand2, RotateCcw, ChevronRight } from "lucide-react";
+import { Palette, Sparkles, Sun, Snowflake, CloudRain, Leaf, Wand2, RotateCcw, ChevronRight, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,7 +34,7 @@ const COLORS = [
 const SEASONS = [
   { id: "summer", label: "Summer", icon: Sun, color: "text-amber-500" },
   { id: "winter", label: "Winter", icon: Snowflake, color: "text-blue-400" },
-  { id: "monsoon", label: "Monsoon", icon: CloudRain, color: "text-slate-500" },
+  { id: "monsoon", label: "Monsoon", icon: CloudRain, color: "text-muted-foreground" },
   { id: "spring", label: "Spring", icon: Leaf, color: "text-emerald-500" },
 ];
 
@@ -89,10 +89,12 @@ export default function AIDesigner() {
   const [selectedBudget, setSelectedBudget] = useState("medium");
   const [isGenerating, setIsGenerating] = useState(false);
   const [responseText, setResponseText] = useState("");
+  const [error, setError] = useState("");
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   const { addToWishlist, addToCart } = useProductActions();
   const abortRef = useRef<AbortController | null>(null);
+  const retryCountRef = useRef(0);
 
   const handleSaveLook = (outfit: ParsedOutfit) => {
     toast({ title: "Look saved! 🎨" });
@@ -110,68 +112,85 @@ export default function AIDesigner() {
     if (!canGenerate) return;
     setIsGenerating(true);
     setResponseText("");
+    setError("");
     setStep(4);
+    retryCountRef.current = 0;
 
-    try {
-      abortRef.current = new AbortController();
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-designer`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            style: selectedStyle,
-            colors: selectedColors,
-            season: selectedSeason,
-            budget: selectedBudget,
-          }),
-          signal: abortRef.current.signal,
+    const doFetch = async (): Promise<void> => {
+      try {
+        abortRef.current = new AbortController();
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-designer`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              style: selectedStyle,
+              colors: selectedColors,
+              season: selectedSeason,
+              budget: selectedBudget,
+            }),
+            signal: abortRef.current.signal,
+          }
+        );
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: "Generation failed" }));
+          throw new Error(err.error || `Generation failed (${resp.status})`);
         }
-      );
 
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Generation failed" }));
-        throw new Error(err.error || "Generation failed");
-      }
+        const reader = resp.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let full = "";
 
-      const reader = resp.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let full = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let idx;
-        while ((idx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim();
-          if (json === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(json);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              full += content;
-              setResponseText(full);
-            }
-          } catch {}
+          let idx;
+          while ((idx = buffer.indexOf("\n")) !== -1) {
+            let line = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (!line.startsWith("data: ")) continue;
+            const json = line.slice(6).trim();
+            if (json === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(json);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                full += content;
+                setResponseText(full);
+              }
+            } catch {}
+          }
         }
-      }
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
+
+        if (!full.trim()) {
+          throw new Error("No response received from AI");
+        }
+      } catch (e: any) {
+        if (e.name === "AbortError") return;
+
+        // Retry up to 2 times on network errors
+        if (retryCountRef.current < 2 && (e.message === "Failed to fetch" || e.message.includes("network"))) {
+          retryCountRef.current++;
+          await new Promise((r) => setTimeout(r, 1000 * retryCountRef.current));
+          return doFetch();
+        }
+
+        setError(e.message || "Something went wrong");
         toast({ title: "Error", description: e.message, variant: "destructive" });
       }
-    } finally {
-      setIsGenerating(false);
-    }
+    };
+
+    await doFetch();
+    setIsGenerating(false);
   };
 
   const reset = () => {
@@ -181,6 +200,7 @@ export default function AIDesigner() {
     setSelectedSeason("");
     setSelectedBudget("medium");
     setResponseText("");
+    setError("");
     setIsGenerating(false);
     setStep(1);
   };
@@ -191,15 +211,15 @@ export default function AIDesigner() {
     .trim();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-hero py-16 md:py-24">
-        <div className="absolute inset-0 opacity-5">
+      <section className="relative overflow-hidden bg-gradient-hero dark:bg-gradient-to-b dark:from-background dark:to-card py-16 md:py-24">
+        <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.15]">
           <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-accent blur-3xl" />
           <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-accent blur-3xl" />
         </div>
         <div className="container relative text-center max-w-3xl mx-auto px-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 text-accent mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 dark:bg-accent/20 text-accent mb-6 border border-accent/20">
             <Wand2 className="w-4 h-4" />
             <span className="text-sm font-medium font-body">AI-Powered Fashion</span>
           </div>
@@ -218,17 +238,17 @@ export default function AIDesigner() {
           {["Style", "Colors", "Season", "Results"].map((label, i) => (
             <div key={label} className="flex items-center gap-2">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
                   step > i + 1
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-accent text-accent-foreground shadow-gold"
                     : step === i + 1
                     ? "bg-primary text-primary-foreground ring-2 ring-accent ring-offset-2 ring-offset-background"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
-                {i + 1}
+                {step > i + 1 ? "✓" : i + 1}
               </div>
-              <span className={`hidden md:inline ${step >= i + 1 ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`hidden md:inline transition-colors ${step >= i + 1 ? "text-foreground" : "text-muted-foreground"}`}>
                 {label}
               </span>
               {i < 3 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
@@ -245,10 +265,10 @@ export default function AIDesigner() {
                 <Card
                   key={s.id}
                   onClick={() => { setSelectedStyle(s.id); if (step === 1) setStep(2); }}
-                  className={`cursor-pointer transition-all hover:shadow-card group ${
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-card group border ${
                     selectedStyle === s.id
-                      ? "ring-2 ring-accent bg-accent/5 shadow-gold"
-                      : "hover:bg-secondary/50"
+                      ? "ring-2 ring-accent bg-accent/5 dark:bg-accent/10 shadow-gold border-accent/30"
+                      : "hover:bg-secondary/50 dark:hover:bg-secondary/30 border-border"
                   }`}
                 >
                   <CardContent className="p-4 text-center space-y-1">
@@ -278,15 +298,21 @@ export default function AIDesigner() {
                   <button
                     key={c.id}
                     onClick={() => { toggleColor(c.id); if (step === 2 && (selectedColors.length > 0 || !active)) setStep(3); }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all font-body text-sm ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-200 font-body text-sm ${
                       active
-                        ? "border-accent bg-accent/10 shadow-md"
-                        : "border-border hover:border-accent/50 bg-card"
+                        ? "border-accent bg-accent/10 dark:bg-accent/20 shadow-md text-foreground"
+                        : "border-border hover:border-accent/50 bg-card text-foreground"
                     }`}
                   >
-                    <span className="w-4 h-4 rounded-full border border-border/50" style={{ backgroundColor: c.hex }} />
+                    <span
+                      className="w-5 h-5 rounded-full border-2 shadow-sm"
+                      style={{
+                        backgroundColor: c.hex,
+                        borderColor: active ? "hsl(var(--accent))" : "hsl(var(--border))",
+                      }}
+                    />
                     {c.label}
-                    {active && <span className="text-accent">✓</span>}
+                    {active && <span className="text-accent font-bold">✓</span>}
                   </button>
                 );
               })}
@@ -306,8 +332,10 @@ export default function AIDesigner() {
                     <Card
                       key={s.id}
                       onClick={() => setSelectedSeason(s.id)}
-                      className={`cursor-pointer transition-all hover:shadow-card ${
-                        selectedSeason === s.id ? "ring-2 ring-accent bg-accent/5 shadow-gold" : "hover:bg-secondary/50"
+                      className={`cursor-pointer transition-all duration-200 hover:shadow-card border ${
+                        selectedSeason === s.id
+                          ? "ring-2 ring-accent bg-accent/5 dark:bg-accent/10 shadow-gold border-accent/30"
+                          : "hover:bg-secondary/50 dark:hover:bg-secondary/30 border-border"
                       }`}
                     >
                       <CardContent className="p-4 text-center space-y-1">
@@ -325,8 +353,10 @@ export default function AIDesigner() {
                 <Badge
                   key={b.id}
                   variant={selectedBudget === b.id ? "default" : "outline"}
-                  className={`cursor-pointer px-4 py-2 text-sm transition-all ${
-                    selectedBudget === b.id ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:bg-secondary"
+                  className={`cursor-pointer px-4 py-2 text-sm transition-all duration-200 ${
+                    selectedBudget === b.id
+                      ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+                      : "hover:bg-secondary dark:hover:bg-secondary/50 text-foreground"
                   }`}
                   onClick={() => setSelectedBudget(b.id)}
                 >
@@ -339,7 +369,7 @@ export default function AIDesigner() {
               size="lg"
               disabled={!canGenerate || isGenerating}
               onClick={generate}
-              className="w-full md:w-auto bg-accent text-accent-foreground hover:bg-accent/90 shadow-gold font-body text-base gap-2"
+              className="w-full md:w-auto bg-accent text-accent-foreground hover:bg-accent/90 shadow-gold font-body text-base gap-2 transition-all duration-200"
             >
               <Sparkles className="w-5 h-5" />
               {isGenerating ? "Designing..." : "Generate Outfits"}
@@ -350,21 +380,24 @@ export default function AIDesigner() {
         {/* Step 4: Results */}
         {step === 4 && (
           <div className="space-y-8 animate-fade-up">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="text-2xl font-display font-semibold text-foreground">Your Designs</h2>
                 <div className="flex gap-2 mt-2 flex-wrap">
-                  <Badge variant="outline" className="capitalize">{selectedStyle}</Badge>
+                  <Badge variant="outline" className="capitalize text-foreground border-border">{selectedStyle}</Badge>
                   {selectedColors.map((c) => {
                     const col = COLORS.find((x) => x.id === c);
                     return (
-                      <Badge key={c} variant="outline" className="gap-1">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col?.hex }} />
+                      <Badge key={c} variant="outline" className="gap-1 text-foreground border-border">
+                        <span
+                          className="w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: col?.hex, borderColor: "hsl(var(--border))" }}
+                        />
                         {col?.label}
                       </Badge>
                     );
                   })}
-                  <Badge variant="outline" className="capitalize">{selectedSeason}</Badge>
+                  <Badge variant="outline" className="capitalize text-foreground border-border">{selectedSeason}</Badge>
                 </div>
               </div>
               <Button variant="outline" size="sm" onClick={reset} className="gap-1">
@@ -379,6 +412,16 @@ export default function AIDesigner() {
                   <Sparkles className="w-6 h-6 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <p className="text-muted-foreground font-body animate-pulse-soft">AI is crafting your outfits...</p>
+              </div>
+            )}
+
+            {error && !isGenerating && outfits.length === 0 && (
+              <div className="flex flex-col items-center py-16 gap-4">
+                <AlertCircle className="w-12 h-12 text-destructive" />
+                <p className="text-foreground font-body font-medium">{error}</p>
+                <Button onClick={generate} variant="outline" className="gap-2">
+                  <RotateCcw className="w-4 h-4" /> Try Again
+                </Button>
               </div>
             )}
 
@@ -399,8 +442,8 @@ export default function AIDesigner() {
             )}
 
             {nonOutfitText && (
-              <Card className="bg-secondary/30 border-border">
-                <CardContent className="p-6 prose prose-sm max-w-none text-foreground font-body">
+              <Card className="bg-secondary/30 dark:bg-card border-border">
+                <CardContent className="p-6 prose prose-sm dark:prose-invert max-w-none text-foreground font-body">
                   <ReactMarkdown>{nonOutfitText}</ReactMarkdown>
                 </CardContent>
               </Card>

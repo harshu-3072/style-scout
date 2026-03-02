@@ -1,21 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Search, ShoppingBag, User, Heart, Sparkles, LogOut } from "lucide-react";
+import { Menu, X, Search, ShoppingBag, User, Heart, Sparkles, LogOut, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") === "dark" || 
+        (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+    return false;
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
 
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Snap Search", path: "/snap-search" },
     { name: "Compare", path: "/compare" },
     { name: "AI Stylist", path: "/ai-stylist" },
+    { name: "AI Designer", path: "/ai-designer" },
     { name: "About", path: "/about" },
     { name: "Contact", path: "/contact" },
   ];

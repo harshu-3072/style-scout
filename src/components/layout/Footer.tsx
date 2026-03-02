@@ -7,6 +7,8 @@ const Footer = () => {
       { name: "Snap Search", path: "/snap-search" },
       { name: "Price Compare", path: "/compare" },
       { name: "AI Stylist", path: "/ai-stylist" },
+      { name: "AI Designer", path: "/ai-designer" },
+      { name: "Trending", path: "/" },
       { name: "Trending", path: "/" },
     ],
     support: [

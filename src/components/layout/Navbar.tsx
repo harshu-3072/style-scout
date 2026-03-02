@@ -79,6 +79,9 @@ const Navbar = () => {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} aria-label="Toggle dark mode">
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
             <Button variant="ghost" size="icon">
               <Search className="w-5 h-5" />
             </Button>

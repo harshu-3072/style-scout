@@ -22,11 +22,15 @@ const ProfilePage = () => {
   }, [user]);
 
   const fetchProfile = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", user!.id)
-      .single();
+      .maybeSingle();
+    if (error) {
+      toast({ title: "Error loading profile", description: error.message, variant: "destructive" });
+      return;
+    }
     if (data) {
       setProfile({
         full_name: data.full_name || "",

@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.generate-outfit-image]
 verify_jwt = false
+
+[functions.ai-stylist]
+verify_jwt = false
+
+[functions.ai-designer]
+verify_jwt = false

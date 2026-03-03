@@ -21,7 +21,7 @@ const SavedLooksPage = () => {
     queryKey: ["saved-looks", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("saved_looks" as any)
+        .from("saved_looks")
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
@@ -33,7 +33,7 @@ const SavedLooksPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("saved_looks" as any).delete().eq("id", id);
+      const { error } = await supabase.from("saved_looks").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

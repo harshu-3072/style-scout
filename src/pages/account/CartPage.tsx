@@ -18,7 +18,8 @@ const CartPage = () => {
   }, [user]);
 
   const fetchCart = async () => {
-    const { data } = await supabase.from("cart_items").select("*").eq("user_id", user!.id).order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("cart_items").select("*").eq("user_id", user!.id).order("created_at", { ascending: false });
+    if (error) toast({ title: "Error loading cart", description: error.message, variant: "destructive" });
     setItems(data || []);
     setLoading(false);
   };

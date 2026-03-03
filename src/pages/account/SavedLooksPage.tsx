@@ -21,7 +21,7 @@ const SavedLooksPage = () => {
     queryKey: ["saved-looks", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("saved_looks" as any)
+        .from("saved_looks")
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });

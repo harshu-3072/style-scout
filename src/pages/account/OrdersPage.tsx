@@ -35,11 +35,12 @@ const OrdersPage = () => {
   }, [location.state]);
 
   const fetchOrders = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("orders")
       .select("*")
       .eq("user_id", user!.id)
       .order("created_at", { ascending: false });
+    if (error) toast({ title: "Error loading orders", description: error.message, variant: "destructive" });
     setOrders(data || []);
     setLoading(false);
   };

@@ -138,6 +138,7 @@ export default function AIDesigner() {
               colors: selectedColors,
               season: selectedSeason,
               budget: selectedBudget,
+              gender: selectedGender,
             }),
             signal: abortRef.current.signal,
           }

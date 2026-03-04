@@ -206,6 +206,7 @@ export default function AIDesigner() {
     setSelectedColors([]);
     setSelectedSeason("");
     setSelectedBudget("medium");
+    setSelectedGender("unisex");
     setResponseText("");
     setError("");
     setIsGenerating(false);

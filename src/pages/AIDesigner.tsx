@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useProductActions } from "@/hooks/use-product-actions";
 import { OutfitCard, type ParsedOutfit } from "@/components/ai-stylist/OutfitCard";
-import { OutfitImagePreview } from "@/components/ai-stylist/OutfitImagePreview";
 import ReactMarkdown from "react-markdown";
 
 const STYLES = [

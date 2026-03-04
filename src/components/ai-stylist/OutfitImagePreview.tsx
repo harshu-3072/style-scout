@@ -27,6 +27,7 @@ export function OutfitImagePreview({ outfit, gender }: OutfitImagePreviewProps) 
         body: JSON.stringify({
           outfitName: outfit.name,
           items: outfit.items,
+          gender: gender || "person",
         }),
       });
 

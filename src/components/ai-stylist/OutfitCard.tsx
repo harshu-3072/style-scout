@@ -189,7 +189,7 @@ export function OutfitCard({ outfit, onSaveLook, addToWishlist, addToCart, isSav
 
         {/* AI Image Preview */}
         <div className="mb-3">
-          <OutfitImagePreview outfit={outfit} />
+          <OutfitImagePreview outfit={outfit} gender={gender} />
         </div>
 
         {/* Footer */}

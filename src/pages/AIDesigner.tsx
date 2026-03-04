@@ -466,6 +466,7 @@ export default function AIDesigner() {
                     onSaveLook={handleSaveLook}
                     addToWishlist={addToWishlist}
                     addToCart={addToCart}
+                    gender={selectedGender}
                   />
                 ))}
               </div>

@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useProductActions } from "@/hooks/use-product-actions";
 import { OutfitCard, type ParsedOutfit } from "@/components/ai-stylist/OutfitCard";
-import { OutfitImagePreview } from "@/components/ai-stylist/OutfitImagePreview";
 import ReactMarkdown from "react-markdown";
 
 const STYLES = [
@@ -428,15 +427,13 @@ export default function AIDesigner() {
             {outfits.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {outfits.map((outfit, i) => (
-                  <div key={i} className="space-y-3">
-                    <OutfitCard
-                      outfit={outfit}
-                      onSaveLook={handleSaveLook}
-                      addToWishlist={addToWishlist}
-                      addToCart={addToCart}
-                    />
-                    <OutfitImagePreview outfit={outfit} />
-                  </div>
+                  <OutfitCard
+                    key={i}
+                    outfit={outfit}
+                    onSaveLook={handleSaveLook}
+                    addToWishlist={addToWishlist}
+                    addToCart={addToCart}
+                  />
                 ))}
               </div>
             )}

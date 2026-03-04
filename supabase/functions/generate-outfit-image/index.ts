@@ -12,18 +12,30 @@ serve(async (req) => {
   }
 
   try {
-    const { outfitName, items } = await req.json();
+    const { outfitName, items, gender } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Build a detailed prompt from outfit items
+    // Build a detailed prompt showing a model wearing the outfit
     const itemDescriptions = items
       .map((item: any) => `${item.type}: ${item.name}`)
       .join(", ");
 
-    const prompt = `Generate a high-quality fashion flat-lay or mannequin display image showing this complete outfit called "${outfitName}": ${itemDescriptions}. 
-Style: Clean, editorial fashion photography on a minimal background. Show all items arranged beautifully together as a cohesive outfit. Professional fashion catalog style. No text or watermarks. Ultra high resolution.`;
+    const genderStr = gender || "person";
+
+    const prompt = `Generate a full-body fashion editorial photograph of a stylish ${genderStr} model wearing this complete outfit called "${outfitName}": ${itemDescriptions}.
+
+Requirements:
+- Full-body shot of a model wearing ALL the outfit items together
+- Fashion editorial style, like a magazine lookbook
+- Natural, confident pose showing the outfit clearly
+- Clean, modern studio or lifestyle background
+- Professional lighting, high-end fashion photography
+- The model should look stylish and the outfit should be the focus
+- Show how the items work together as a cohesive look
+- No text, no watermarks
+- Ultra high resolution`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

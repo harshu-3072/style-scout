@@ -6,9 +6,10 @@ import type { ParsedOutfit } from "./OutfitCard";
 
 interface OutfitImagePreviewProps {
   outfit: ParsedOutfit;
+  gender?: string;
 }
 
-export function OutfitImagePreview({ outfit }: OutfitImagePreviewProps) {
+export function OutfitImagePreview({ outfit, gender }: OutfitImagePreviewProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);

@@ -92,6 +92,7 @@ export default function AIDesigner() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSeason, setSelectedSeason] = useState("");
   const [selectedBudget, setSelectedBudget] = useState("medium");
+  const [selectedGender, setSelectedGender] = useState("unisex");
   const [isGenerating, setIsGenerating] = useState(false);
   const [responseText, setResponseText] = useState("");
   const [error, setError] = useState("");

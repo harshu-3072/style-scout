@@ -22,20 +22,21 @@ serve(async (req) => {
       .map((item: any) => `${item.type}: ${item.name}`)
       .join(", ");
 
-    const genderStr = gender || "person";
+    const genderLabel = gender === "male" ? "male" : gender === "female" ? "female" : "stylish";
 
-    const prompt = `Generate a full-body fashion editorial photograph of a stylish ${genderStr} model wearing this complete outfit called "${outfitName}": ${itemDescriptions}.
+    const prompt = `Generate a professional full-body fashion editorial photograph of a ${genderLabel} model wearing this complete outfit called "${outfitName}": ${itemDescriptions}.
 
-Requirements:
-- Full-body shot of a model wearing ALL the outfit items together
-- Fashion editorial style, like a magazine lookbook
-- Natural, confident pose showing the outfit clearly
-- Clean, modern studio or lifestyle background
-- Professional lighting, high-end fashion photography
-- The model should look stylish and the outfit should be the focus
-- Show how the items work together as a cohesive look
-- No text, no watermarks
-- Ultra high resolution`;
+CRITICAL REQUIREMENTS:
+- FULL BODY shot from head to toe, showing the ENTIRE model including shoes/footwear
+- The model must be wearing ALL the outfit items together as described
+- Fashion magazine lookbook / editorial style photography
+- Natural, confident standing pose that clearly shows every piece of clothing and accessories
+- Clean modern studio background or simple lifestyle setting
+- Professional studio lighting, high-end fashion photography quality
+- The complete outfit from top to bottom must be clearly visible
+- Show the shoes/footwear prominently at the bottom
+- No text, no watermarks, no cropping of the body
+- Ultra high resolution, portrait orientation (tall image)`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

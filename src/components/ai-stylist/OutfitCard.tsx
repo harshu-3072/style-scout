@@ -66,9 +66,10 @@ interface OutfitCardProps {
   addToWishlist: (product: any) => void;
   addToCart: (product: any) => void;
   isSaved?: boolean;
+  gender?: string;
 }
 
-export function OutfitCard({ outfit, onSaveLook, addToWishlist, addToCart, isSaved }: OutfitCardProps) {
+export function OutfitCard({ outfit, onSaveLook, addToWishlist, addToCart, isSaved, gender }: OutfitCardProps) {
   const totalPrice = outfit.items.reduce((s, i) => s + i.price, 0);
   const ownItems = outfit.items.filter((i) => i.platform.toLowerCase() === "own wardrobe").length;
   const [compareItem, setCompareItem] = useState<string | null>(null);
@@ -188,7 +189,7 @@ export function OutfitCard({ outfit, onSaveLook, addToWishlist, addToCart, isSav
 
         {/* AI Image Preview */}
         <div className="mb-3">
-          <OutfitImagePreview outfit={outfit} />
+          <OutfitImagePreview outfit={outfit} gender={gender} />
         </div>
 
         {/* Footer */}

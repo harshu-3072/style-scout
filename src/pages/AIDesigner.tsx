@@ -332,11 +332,32 @@ export default function AIDesigner() {
         {step >= 3 && step < 4 && (
           <div className="animate-fade-up space-y-6">
             <div className="space-y-4">
-              <h2 className="text-2xl font-display font-semibold text-foreground">Season & Budget</h2>
+              <h2 className="text-2xl font-display font-semibold text-foreground">Gender, Season & Budget</h2>
+              
+              {/* Gender Selection */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground font-body">Who is this for?</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {GENDERS.map((g) => (
+                    <Card
+                      key={g.id}
+                      onClick={() => setSelectedGender(g.id)}
+                      className={`cursor-pointer transition-all duration-200 hover:shadow-card border ${
+                        selectedGender === g.id
+                          ? "ring-2 ring-accent bg-accent/5 dark:bg-accent/10 shadow-gold border-accent/30"
+                          : "hover:bg-secondary/50 dark:hover:bg-secondary/30 border-border"
+                      }`}
+                    >
+                      <CardContent className="p-3 text-center space-y-1">
+                        <span className="text-2xl">{g.icon}</span>
+                        <p className="font-semibold text-foreground font-body text-sm">{g.label}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {SEASONS.map((s) => {
-                  const Icon = s.icon;
-                  return (
                     <Card
                       key={s.id}
                       onClick={() => setSelectedSeason(s.id)}

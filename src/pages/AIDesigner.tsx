@@ -428,15 +428,13 @@ export default function AIDesigner() {
             {outfits.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {outfits.map((outfit, i) => (
-                  <div key={i} className="space-y-3">
-                    <OutfitCard
-                      outfit={outfit}
-                      onSaveLook={handleSaveLook}
-                      addToWishlist={addToWishlist}
-                      addToCart={addToCart}
-                    />
-                    <OutfitImagePreview outfit={outfit} />
-                  </div>
+                  <OutfitCard
+                    key={i}
+                    outfit={outfit}
+                    onSaveLook={handleSaveLook}
+                    addToWishlist={addToWishlist}
+                    addToCart={addToCart}
+                  />
                 ))}
               </div>
             )}

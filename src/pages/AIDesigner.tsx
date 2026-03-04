@@ -358,6 +358,9 @@ export default function AIDesigner() {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {SEASONS.map((s) => {
+                  const Icon = s.icon;
+                  return (
                     <Card
                       key={s.id}
                       onClick={() => setSelectedSeason(s.id)}

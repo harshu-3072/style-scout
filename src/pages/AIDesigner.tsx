@@ -37,6 +37,12 @@ const SEASONS = [
   { id: "spring", label: "Spring", icon: Leaf, color: "text-emerald-500" },
 ];
 
+const GENDERS = [
+  { id: "male", label: "Male", icon: "👨" },
+  { id: "female", label: "Female", icon: "👩" },
+  { id: "unisex", label: "Unisex", icon: "🧑" },
+];
+
 const BUDGETS = [
   { id: "budget", label: "Budget", desc: "Under ₹3,000" },
   { id: "medium", label: "Medium", desc: "₹3,000 – ₹8,000" },

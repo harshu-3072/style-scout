@@ -44,6 +44,9 @@ const Compare = () => {
       if (data?.error) throw new Error(data.error);
 
       setResults(data?.products || []);
+      if (data?.warning) {
+        toast.warning(data.warning);
+      }
       if (!data?.products?.length) {
         toast.info("No products found. Try a different search term.");
       }

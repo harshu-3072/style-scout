@@ -45,6 +45,7 @@ export function PriceCompareModal({ open, onOpenChange, productName, addToWishli
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (data?.warning) console.warn("Price compare warning:", data.warning);
       setResults(data?.products || []);
     } catch (err) {
       console.error("Compare error:", err);

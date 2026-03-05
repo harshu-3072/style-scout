@@ -33,6 +33,16 @@ serve(async (req) => {
     const response = await fetch(searchUrl.toString());
     if (!response.ok) {
       const errorText = await response.text();
+
+      if (response.status === 401) {
+        return new Response(JSON.stringify({
+          error: "SerpAPI authentication failed. Please update the SERPAPI_KEY secret with a valid key from serpapi.com/manage-api-key",
+        }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       throw new Error(`SerpAPI request failed [${response.status}]: ${errorText}`);
     }
 

@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY');
+    const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') || Deno.env.get('SERPAPI_API_KEY');
     if (!SERPAPI_KEY) {
       throw new Error('SERPAPI_KEY is not configured');
     }

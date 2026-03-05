@@ -1,11 +1,10 @@
 import { useState, useRef } from "react";
-import { Palette, Sparkles, Sun, Snowflake, CloudRain, Leaf, Wand2, RotateCcw, ChevronRight, AlertCircle } from "lucide-react";
+import { Palette, Sparkles, Sun, Snowflake, CloudRain, Leaf, Wand2, RotateCcw, ChevronRight, AlertCircle, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useProductActions } from "@/hooks/use-product-actions";
-import { OutfitCard, type ParsedOutfit } from "@/components/ai-stylist/OutfitCard";
+import { OutfitImagePreview } from "@/components/ai-stylist/OutfitImagePreview";
 import ReactMarkdown from "react-markdown";
 
 const STYLES = [
@@ -87,6 +86,11 @@ function parseOutfits(text: string): Outfit[] {
   return outfits;
 }
 
+const TYPE_ICONS: Record<string, string> = {
+  top: "👕", bottom: "👖", footwear: "👟", accessory: "💍",
+  jacket: "🧥", dress: "👗", bag: "👜", watch: "⌚",
+};
+
 export default function AIDesigner() {
   const [selectedStyle, setSelectedStyle] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -98,13 +102,8 @@ export default function AIDesigner() {
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
   const { toast } = useToast();
-  const { addToWishlist, addToCart } = useProductActions();
   const abortRef = useRef<AbortController | null>(null);
   const retryCountRef = useRef(0);
-
-  const handleSaveLook = (outfit: ParsedOutfit) => {
-    toast({ title: "Look saved! 🎨" });
-  };
 
   const toggleColor = (id: string) => {
     setSelectedColors((prev) =>
@@ -183,14 +182,11 @@ export default function AIDesigner() {
         }
       } catch (e: any) {
         if (e.name === "AbortError") return;
-
-        // Retry up to 2 times on network errors
         if (retryCountRef.current < 2 && (e.message === "Failed to fetch" || e.message.includes("network"))) {
           retryCountRef.current++;
           await new Promise((r) => setTimeout(r, 1000 * retryCountRef.current));
           return doFetch();
         }
-
         setError(e.message || "Something went wrong");
         toast({ title: "Error", description: e.message, variant: "destructive" });
       }
@@ -229,13 +225,13 @@ export default function AIDesigner() {
         <div className="container relative text-center max-w-3xl mx-auto px-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 dark:bg-accent/20 text-accent mb-6 border border-accent/20">
             <Wand2 className="w-4 h-4" />
-            <span className="text-sm font-medium font-body">AI-Powered Fashion</span>
+            <span className="text-sm font-medium font-body">AI Style Inspiration</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground mb-4 tracking-tight">
             AI Fashion <span className="text-gradient-gold">Designer</span>
           </h1>
           <p className="text-muted-foreground text-lg font-body max-w-xl mx-auto">
-            Tell us your vibe, pick your palette, and let AI craft stunning outfit suggestions tailored just for you.
+            Get personalized outfit suggestions with AI-generated visuals to inspire your style. Pure inspiration, no shopping needed.
           </p>
         </div>
       </section>
@@ -328,12 +324,12 @@ export default function AIDesigner() {
           </div>
         )}
 
-        {/* Step 3: Season + Budget + Generate */}
+        {/* Step 3: Season + Budget + Gender + Generate */}
         {step >= 3 && step < 4 && (
           <div className="animate-fade-up space-y-6">
             <div className="space-y-4">
               <h2 className="text-2xl font-display font-semibold text-foreground">Gender, Season & Budget</h2>
-              
+
               {/* Gender Selection */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground font-body">Who is this for?</p>
@@ -404,17 +400,18 @@ export default function AIDesigner() {
               className="w-full md:w-auto bg-accent text-accent-foreground hover:bg-accent/90 shadow-gold font-body text-base gap-2 transition-all duration-200"
             >
               <Sparkles className="w-5 h-5" />
-              {isGenerating ? "Designing..." : "Generate Outfits"}
+              {isGenerating ? "Designing..." : "Generate Style Inspiration"}
             </Button>
           </div>
         )}
 
-        {/* Step 4: Results */}
+        {/* Step 4: Results - Style Inspiration Only */}
         {step === 4 && (
           <div className="space-y-8 animate-fade-up">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <h2 className="text-2xl font-display font-semibold text-foreground">Your Designs</h2>
+                <h2 className="text-2xl font-display font-semibold text-foreground">Your Style Inspiration</h2>
+                <p className="text-sm text-muted-foreground font-body mt-1">AI-generated outfit ideas to inspire your personal style</p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <Badge variant="outline" className="capitalize text-foreground border-border">{selectedStyle}</Badge>
                   {selectedColors.map((c) => {
@@ -443,7 +440,7 @@ export default function AIDesigner() {
                   <div className="w-16 h-16 rounded-full border-4 border-muted border-t-accent animate-spin" />
                   <Sparkles className="w-6 h-6 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
-                <p className="text-muted-foreground font-body animate-pulse-soft">AI is crafting your outfits...</p>
+                <p className="text-muted-foreground font-body animate-pulse-soft">AI is crafting your style inspiration...</p>
               </div>
             )}
 
@@ -460,14 +457,54 @@ export default function AIDesigner() {
             {outfits.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {outfits.map((outfit, i) => (
-                  <OutfitCard
-                    key={i}
-                    outfit={outfit}
-                    onSaveLook={handleSaveLook}
-                    addToWishlist={addToWishlist}
-                    addToCart={addToCart}
-                    gender={selectedGender}
-                  />
+                  <Card key={i} className="overflow-hidden border-border hover:shadow-elevated transition-all duration-300 group">
+                    {/* AI Image Preview - Main focus */}
+                    <div className="p-4">
+                      <OutfitImagePreview outfit={outfit} gender={selectedGender} />
+                    </div>
+
+                    <CardContent className="p-5 pt-0 space-y-4">
+                      {/* Outfit name */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-accent" />
+                        </div>
+                        <h4 className="font-display font-semibold text-sm leading-tight">{outfit.name}</h4>
+                      </div>
+
+                      {/* Items list - descriptive only */}
+                      <div className="space-y-2">
+                        {outfit.items.map((item, ii) => {
+                          const icon = TYPE_ICONS[item.type.toLowerCase()] || "🏷️";
+                          return (
+                            <div
+                              key={ii}
+                              className="flex items-center gap-2.5 rounded-xl bg-secondary/40 p-2.5"
+                            >
+                              <span className="text-base">{icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  {item.type}
+                                </span>
+                                <p className="text-xs font-medium leading-snug text-foreground">{item.name}</p>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                ~₹{item.price.toLocaleString()}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Estimated total */}
+                      <div className="flex items-center justify-between border-t border-border pt-3">
+                        <span className="text-xs text-muted-foreground font-body">Estimated budget</span>
+                        <span className="font-display font-bold text-base text-foreground">
+                          ~₹{outfit.items.reduce((s, i) => s + i.price, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}

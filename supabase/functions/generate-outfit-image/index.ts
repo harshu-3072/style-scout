@@ -24,19 +24,19 @@ serve(async (req) => {
 
     const genderLabel = gender === "male" ? "male" : gender === "female" ? "female" : "stylish";
 
-    const prompt = `Generate a professional full-body fashion editorial photograph of a ${genderLabel} model wearing this complete outfit called "${outfitName}": ${itemDescriptions}.
+    const prompt = `Create a stunning high-resolution full-body fashion editorial photograph in 2:3 portrait aspect ratio of a ${genderLabel} model wearing this complete outfit called "${outfitName}": ${itemDescriptions}.
 
-CRITICAL REQUIREMENTS:
-- FULL BODY shot from head to toe, showing the ENTIRE model including shoes/footwear
-- The model must be wearing ALL the outfit items together as described
-- Fashion magazine lookbook / editorial style photography
-- Natural, confident standing pose that clearly shows every piece of clothing and accessories
-- Clean modern studio background or simple lifestyle setting
-- Professional studio lighting, high-end fashion photography quality
-- The complete outfit from top to bottom must be clearly visible
-- Show the shoes/footwear prominently at the bottom
-- No text, no watermarks, no cropping of the body
-- Ultra high resolution, portrait orientation (tall image)`;
+ABSOLUTELY CRITICAL - DO NOT VIOLATE:
+1. FULL BODY FRAMING: The photograph MUST show the model from the TOP OF THE HEAD (including hair) all the way down to the BOTTOM OF THE FEET/SHOES. Leave adequate space above the head and below the feet. Never crop the face, head, hair, or feet.
+2. FACE: The model's face must be fully visible, well-lit, with natural expression. Show clear facial features - eyes, nose, mouth. No obscuring, no blurring, no cropping of the face.
+3. FEET & SHOES: The footwear/shoes must be COMPLETELY visible at the bottom of the frame. Show the full shoe from toe to heel.
+4. OUTFIT VISIBILITY: Every single item described must be clearly visible and distinguishable on the model.
+5. POSE: Natural, confident standing pose - slightly angled 3/4 view to show outfit dimension. Arms relaxed or one hand on hip.
+6. LIGHTING: Professional fashion studio lighting - soft key light with fill, creating depth and highlighting fabric textures.
+7. BACKGROUND: Clean, minimal studio backdrop (light grey or white seamless paper).
+8. QUALITY: Ultra high resolution, sharp focus throughout, magazine-quality fashion photography.
+9. NO text, NO watermarks, NO logos, NO overlays of any kind.
+10. The image should look like it belongs in Vogue or Elle magazine.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -45,7 +45,7 @@ CRITICAL REQUIREMENTS:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-3-pro-image-preview",
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),

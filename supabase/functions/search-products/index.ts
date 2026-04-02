@@ -53,14 +53,17 @@ function getPlatform(source: string, link: string): string {
 }
 
 function getProductLink(item: any, platform: string, query: string): string {
-  // SerpAPI fields: product_link (direct), link (Google redirect), or serpapi_product_api
-  const directLink = item.product_link || item.link;
-  if (directLink && directLink !== "#" && directLink.startsWith("http")) {
+  // SerpAPI product_link is a direct retailer URL (when available)
+  const directLink = item.product_link;
+  if (directLink && directLink.startsWith("http") && !directLink.includes("google.com/search")) {
     return directLink;
   }
-  // Fallback: generate a search URL for the platform
+  // For known platforms, generate a search URL using the product name for more accurate results
+  const searchTerm = item.title || query;
   const fn = platformSearchUrls[platform];
-  return fn ? fn(query || item.title || "") : `https://www.google.com/search?q=${encodeURIComponent(item.title || query)}`;
+  if (fn) return fn(searchTerm);
+  // Fallback: Google search for the product name
+  return `https://www.google.com/search?q=${encodeURIComponent(searchTerm)}`;
 }
 
 function parsePrice(item: any): number {

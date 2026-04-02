@@ -167,16 +167,17 @@ serve(async (req) => {
       .map((item: any, index: number) => {
         const price = parsePrice(item);
         if (price <= 0) return null;
+        const platform = getPlatform(item.source || "", item.product_link || item.link || "");
         return {
           id: index + 1,
           name: item.title || "Unknown Product",
           image: item.thumbnail || "",
-          platform: getPlatform(item.source || "", item.link || ""),
+          platform,
           price,
           originalPrice: parseOriginalPrice(item, price),
           rating: item.rating || 0,
           reviews: item.reviews || 0,
-          link: item.link || "#",
+          link: getProductLink(item, platform, query),
           source: item.source || "",
         };
       })

@@ -35,12 +35,35 @@ const platformKeywords: Record<string, string[]> = {
   Zara: ["zara.com"],
 };
 
+const platformSearchUrls: Record<string, (q: string) => string> = {
+  Amazon: (q) => `https://www.amazon.in/s?k=${encodeURIComponent(q)}`,
+  Flipkart: (q) => `https://www.flipkart.com/search?q=${encodeURIComponent(q)}`,
+  Myntra: (q) => `https://www.myntra.com/${encodeURIComponent(q.replace(/\s+/g, "-"))}`,
+  Ajio: (q) => `https://www.ajio.com/search/?text=${encodeURIComponent(q)}`,
+  Meesho: (q) => `https://www.meesho.com/search?q=${encodeURIComponent(q)}`,
+  Nykaa: (q) => `https://www.nykaa.com/search/result/?q=${encodeURIComponent(q)}`,
+};
+
 function getPlatform(source: string, link: string): string {
   const combined = `${source} ${link}`.toLowerCase();
   for (const [platform, keywords] of Object.entries(platformKeywords)) {
     if (keywords.some((kw) => combined.includes(kw))) return platform;
   }
   return source || "Other";
+}
+
+function getProductLink(item: any, platform: string, query: string): string {
+  // SerpAPI product_link is a direct retailer URL (when available)
+  const directLink = item.product_link;
+  if (directLink && directLink.startsWith("http") && !directLink.includes("google.com/search")) {
+    return directLink;
+  }
+  // For known platforms, generate a search URL using the product name for more accurate results
+  const searchTerm = item.title || query;
+  const fn = platformSearchUrls[platform];
+  if (fn) return fn(searchTerm);
+  // Fallback: Google search for the product name
+  return `https://www.google.com/search?q=${encodeURIComponent(searchTerm)}`;
 }
 
 function parsePrice(item: any): number {
@@ -147,16 +170,17 @@ serve(async (req) => {
       .map((item: any, index: number) => {
         const price = parsePrice(item);
         if (price <= 0) return null;
+        const platform = getPlatform(item.source || "", item.product_link || item.link || "");
         return {
           id: index + 1,
           name: item.title || "Unknown Product",
           image: item.thumbnail || "",
-          platform: getPlatform(item.source || "", item.link || ""),
+          platform,
           price,
           originalPrice: parseOriginalPrice(item, price),
           rating: item.rating || 0,
           reviews: item.reviews || 0,
-          link: item.link || "#",
+          link: getProductLink(item, platform, query),
           source: item.source || "",
         };
       })

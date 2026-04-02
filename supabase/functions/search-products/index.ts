@@ -35,12 +35,32 @@ const platformKeywords: Record<string, string[]> = {
   Zara: ["zara.com"],
 };
 
+const platformSearchUrls: Record<string, (q: string) => string> = {
+  Amazon: (q) => `https://www.amazon.in/s?k=${encodeURIComponent(q)}`,
+  Flipkart: (q) => `https://www.flipkart.com/search?q=${encodeURIComponent(q)}`,
+  Myntra: (q) => `https://www.myntra.com/${encodeURIComponent(q.replace(/\s+/g, "-"))}`,
+  Ajio: (q) => `https://www.ajio.com/search/?text=${encodeURIComponent(q)}`,
+  Meesho: (q) => `https://www.meesho.com/search?q=${encodeURIComponent(q)}`,
+  Nykaa: (q) => `https://www.nykaa.com/search/result/?q=${encodeURIComponent(q)}`,
+};
+
 function getPlatform(source: string, link: string): string {
   const combined = `${source} ${link}`.toLowerCase();
   for (const [platform, keywords] of Object.entries(platformKeywords)) {
     if (keywords.some((kw) => combined.includes(kw))) return platform;
   }
   return source || "Other";
+}
+
+function getProductLink(item: any, platform: string, query: string): string {
+  // SerpAPI fields: product_link (direct), link (Google redirect), or serpapi_product_api
+  const directLink = item.product_link || item.link;
+  if (directLink && directLink !== "#" && directLink.startsWith("http")) {
+    return directLink;
+  }
+  // Fallback: generate a search URL for the platform
+  const fn = platformSearchUrls[platform];
+  return fn ? fn(query || item.title || "") : `https://www.google.com/search?q=${encodeURIComponent(item.title || query)}`;
 }
 
 function parsePrice(item: any): number {

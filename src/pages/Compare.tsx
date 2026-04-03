@@ -165,7 +165,7 @@ const Compare = () => {
                         <div className="flex-1 lg:flex-none">
                           <h3 className="font-display text-xl font-semibold mb-2">{product.name}</h3>
                           <div className="flex items-center gap-2 mb-4">
-                            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold flex items-center gap-1">
+                            <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-sm font-semibold flex items-center gap-1">
                               <TrendingDown className="w-4 h-4" />
                               Best: ₹{bestDeal.price.toLocaleString()} on {bestDeal.platform}
                             </span>

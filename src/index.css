@@ -150,6 +150,7 @@
 
   .bg-gradient-hero {
     background: var(--gradient-hero);
+    color: hsl(var(--gradient-hero-text));
   }
 
   .bg-gradient-dark {

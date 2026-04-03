@@ -1,9 +1,22 @@
-## Changes
+## Add Foreign Key Constraints to All Tables
 
-### 1. Database Migration — Add Foreign Keys
-Add FK constraints on `saved_looks.user_id` and `wardrobe_items.user_id` referencing `auth.users(id)` with `ON DELETE CASCADE`.
+Add missing FK constraints so all tables are properly linked in the database:
 
-### 2. Product Links Already Correct
-The SerpAPI `search-products` edge function returns `item.link` which is the **direct product page URL** from Google Shopping results — not a search URL. SnapSearch.tsx already uses these direct links for both "Buy on..." buttons and the "Compare prices" section. No code changes needed here.
+### Migration SQL:
+1. **profiles.user_id** → `auth.users(id)` ON DELETE CASCADE
+2. **addresses.user_id** → `auth.users(id)` ON DELETE CASCADE  
+3. **cart_items.user_id** → `auth.users(id)` ON DELETE CASCADE
+4. **wishlist.user_id** → `auth.users(id)` ON DELETE CASCADE
+5. **orders.user_id** → `auth.users(id)` ON DELETE CASCADE
+6. **orders.address_id** → `addresses(id)` ON DELETE SET NULL
+7. **order_items.order_id** → `orders(id)` ON DELETE CASCADE
+8. **saved_looks.user_id** → `auth.users(id)` ON DELETE CASCADE
+9. **wardrobe_items.user_id** → `auth.users(id)` ON DELETE CASCADE
 
-The `ProductResultCard.tsx` component (which generates search URLs via `platformUrls`) is **not used** in the current SnapSearch page — it's a legacy component that can be cleaned up later.
+### Also add missing triggers:
+- `updated_at` trigger on `profiles` and `orders` tables (if not already attached)
+
+### Also attach the `on_auth_user_created` trigger:
+- Re-create the trigger on `auth.users` to auto-create profiles (the function exists but trigger may be missing)
+
+This ensures referential integrity and cascading deletes when a user is removed.

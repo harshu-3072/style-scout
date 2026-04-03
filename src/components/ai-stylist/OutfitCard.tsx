@@ -43,7 +43,7 @@ function getPlatformColor(platform: string): string {
     ajio: "bg-purple-500/15 text-purple-600 border-purple-500/30",
     meesho: "bg-rose-500/15 text-rose-600 border-rose-500/30",
     "h&m": "bg-red-500/15 text-red-600 border-red-500/30",
-    zara: "bg-neutral-500/15 text-neutral-700 border-neutral-500/30",
+    zara: "bg-neutral-500/15 text-neutral-600 dark:text-neutral-300 border-neutral-500/30",
     "own wardrobe": "bg-green-500/15 text-green-600 border-green-500/30",
   };
   return colors[platform.toLowerCase()] || "bg-muted text-muted-foreground border-border";

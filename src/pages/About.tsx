@@ -71,7 +71,7 @@ const About = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
+      <section className="py-16 bg-foreground dark:bg-white/10">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, i) => (
@@ -79,7 +79,7 @@ const About = () => {
                 <div className="font-display text-4xl md:text-5xl font-bold text-gold mb-2">
                   {stat.value}
                 </div>
-                <div className="text-sm text-primary-foreground/70 uppercase tracking-wider">
+                <div className="text-sm text-background/70 dark:text-foreground/70 uppercase tracking-wider">
                   {stat.label}
                 </div>
               </div>
@@ -120,7 +120,7 @@ const About = () => {
       </section>
 
       {/* Story Section */}
-      <section className="py-24 bg-secondary/30">
+      <section className="py-24 bg-secondary/30 dark:bg-secondary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <h2 className="font-display text-4xl font-bold text-center mb-12">
@@ -142,12 +142,12 @@ const About = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-dark text-primary-foreground">
+      <section className="py-20 bg-gradient-dark text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-6">
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-6 text-white">
             Join Our Fashion Revolution
           </h2>
-          <p className="text-lg text-primary-foreground/70 max-w-xl mx-auto mb-8">
+          <p className="text-lg text-white/70 max-w-xl mx-auto mb-8">
             Experience the future of fashion shopping. It's free to start.
           </p>
           <Button variant="gold" size="xl" asChild>

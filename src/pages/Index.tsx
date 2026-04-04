@@ -13,7 +13,7 @@ const HeroSection = () => {
           alt="Fashion hero"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/40 dark:from-background/98 dark:via-background/85 dark:to-background/50" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">

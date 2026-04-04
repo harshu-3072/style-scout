@@ -85,7 +85,7 @@ const FeatureCard = ({
 }) => (
   <Link
     to={link}
-    className="group block p-8 rounded-2xl bg-card border border-border hover:border-gold/50 shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
+    className="group block p-8 rounded-2xl bg-card dark:bg-card border border-border hover:border-gold/50 shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
   >
     <div className="w-14 h-14 rounded-xl bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold/20 transition-colors">
       <Icon className="w-7 h-7 text-gold" />

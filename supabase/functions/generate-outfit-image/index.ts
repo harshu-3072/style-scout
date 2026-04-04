@@ -24,19 +24,32 @@ serve(async (req) => {
 
     const genderLabel = gender === "male" ? "male" : gender === "female" ? "female" : "stylish";
 
-    const prompt = `Create a stunning high-resolution full-body fashion editorial photograph in 2:3 portrait aspect ratio of a ${genderLabel} model wearing this complete outfit called "${outfitName}": ${itemDescriptions}.
+    const prompt = `Full-body fashion photograph, vertical portrait orientation. A ${genderLabel} model wearing: ${itemDescriptions}. Outfit name: "${outfitName}".
 
-ABSOLUTELY CRITICAL - DO NOT VIOLATE:
-1. FULL BODY FRAMING: The photograph MUST show the model from the TOP OF THE HEAD (including hair) all the way down to the BOTTOM OF THE FEET/SHOES. Leave adequate space above the head and below the feet. Never crop the face, head, hair, or feet.
-2. FACE: The model's face must be fully visible, well-lit, with natural expression. Show clear facial features - eyes, nose, mouth. No obscuring, no blurring, no cropping of the face.
-3. FEET & SHOES: The footwear/shoes must be COMPLETELY visible at the bottom of the frame. Show the full shoe from toe to heel.
-4. OUTFIT VISIBILITY: Every single item described must be clearly visible and distinguishable on the model.
-5. POSE: Natural, confident standing pose - slightly angled 3/4 view to show outfit dimension. Arms relaxed or one hand on hip.
-6. LIGHTING: Professional fashion studio lighting - soft key light with fill, creating depth and highlighting fabric textures.
-7. BACKGROUND: Clean, minimal studio backdrop (light grey or white seamless paper).
-8. QUALITY: Ultra high resolution, sharp focus throughout, magazine-quality fashion photography.
-9. NO text, NO watermarks, NO logos, NO overlays of any kind.
-10. The image should look like it belongs in Vogue or Elle magazine.`;
+MANDATORY FRAMING REQUIREMENTS:
+- Camera positioned at waist height, pointing straight ahead
+- Frame starts 30cm ABOVE the top of the model's head
+- Frame ends 30cm BELOW the soles of the shoes/feet
+- The model occupies roughly 80% of the vertical frame height
+- EVERY item listed must be clearly visible
+
+BODY & FACE:
+- Full face visible: eyes, nose, mouth, jawline — no cropping, no blur, no obstruction
+- Hair fully visible including the top of the head
+- Natural confident expression, slight smile
+- 3/4 angle body pose, one hand relaxed at side
+
+FEET & SHOES:
+- Both shoes/feet COMPLETELY visible from toe to heel
+- Floor/ground line visible beneath the shoes
+- Shoes must not be cut off at the bottom edge under any circumstance
+
+TECHNICAL:
+- Clean light-grey seamless studio backdrop
+- Soft professional studio lighting, no harsh shadows
+- Ultra-sharp focus on the entire body from head to toe
+- Magazine-quality editorial fashion photography
+- Absolutely NO text, watermarks, logos, or overlays`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

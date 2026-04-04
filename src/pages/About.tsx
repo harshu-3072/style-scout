@@ -79,7 +79,7 @@ const About = () => {
                 <div className="font-display text-4xl md:text-5xl font-bold text-gold mb-2">
                   {stat.value}
                 </div>
-                <div className="text-sm text-primary-foreground/70 uppercase tracking-wider">
+                <div className="text-sm text-background/70 dark:text-foreground/70 uppercase tracking-wider">
                   {stat.label}
                 </div>
               </div>

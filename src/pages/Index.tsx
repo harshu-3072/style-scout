@@ -147,7 +147,7 @@ const BrandsSection = () => {
   const brands = ["Amazon", "Myntra", "Flipkart", "Meesho", "Ajio", "Nykaa"];
 
   return (
-    <section className="py-16 border-y border-border">
+    <section className="py-16 border-y border-border dark:border-border">
       <div className="container mx-auto px-4">
         <p className="text-center text-sm text-muted-foreground mb-8 uppercase tracking-wider">
           Compare prices across top platforms

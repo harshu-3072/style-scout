@@ -169,12 +169,12 @@ const BrandsSection = () => {
 
 const CTASection = () => {
   return (
-    <section className="py-24 bg-gradient-dark text-primary-foreground">
+    <section className="py-24 bg-gradient-dark text-white">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
+        <h2 className="font-display text-4xl md:text-5xl font-bold mb-6 text-white">
           Ready to Transform Your Shopping?
         </h2>
-        <p className="text-lg text-primary-foreground/70 max-w-2xl mx-auto mb-10">
+        <p className="text-lg text-white/70 max-w-2xl mx-auto mb-10">
           Join thousands of fashion-forward shoppers who save time and money with StyleSnap's AI-powered platform.
         </p>
         <div className="flex flex-wrap justify-center gap-4">

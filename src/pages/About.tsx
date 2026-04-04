@@ -142,12 +142,12 @@ const About = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-dark text-primary-foreground">
+      <section className="py-20 bg-gradient-dark text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-6">
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-6 text-white">
             Join Our Fashion Revolution
           </h2>
-          <p className="text-lg text-primary-foreground/70 max-w-xl mx-auto mb-8">
+          <p className="text-lg text-white/70 max-w-xl mx-auto mb-8">
             Experience the future of fashion shopping. It's free to start.
           </p>
           <Button variant="gold" size="xl" asChild>

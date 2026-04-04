@@ -13,7 +13,7 @@ const HeroSection = () => {
           alt="Fashion hero"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/40 dark:from-background/98 dark:via-background/85 dark:to-background/50" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -85,7 +85,7 @@ const FeatureCard = ({
 }) => (
   <Link
     to={link}
-    className="group block p-8 rounded-2xl bg-card border border-border hover:border-gold/50 shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
+    className="group block p-8 rounded-2xl bg-card dark:bg-card border border-border hover:border-gold/50 shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
   >
     <div className="w-14 h-14 rounded-xl bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold/20 transition-colors">
       <Icon className="w-7 h-7 text-gold" />
@@ -122,7 +122,7 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <section className="py-24 bg-secondary/30">
+    <section className="py-24 bg-secondary/30 dark:bg-secondary/10">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4">
@@ -147,7 +147,7 @@ const BrandsSection = () => {
   const brands = ["Amazon", "Myntra", "Flipkart", "Meesho", "Ajio", "Nykaa"];
 
   return (
-    <section className="py-16 border-y border-border">
+    <section className="py-16 border-y border-border dark:border-border">
       <div className="container mx-auto px-4">
         <p className="text-center text-sm text-muted-foreground mb-8 uppercase tracking-wider">
           Compare prices across top platforms
@@ -169,12 +169,12 @@ const BrandsSection = () => {
 
 const CTASection = () => {
   return (
-    <section className="py-24 bg-gradient-dark text-primary-foreground">
+    <section className="py-24 bg-gradient-dark text-white">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
+        <h2 className="font-display text-4xl md:text-5xl font-bold mb-6 text-white">
           Ready to Transform Your Shopping?
         </h2>
-        <p className="text-lg text-primary-foreground/70 max-w-2xl mx-auto mb-10">
+        <p className="text-lg text-white/70 max-w-2xl mx-auto mb-10">
           Join thousands of fashion-forward shoppers who save time and money with StyleSnap's AI-powered platform.
         </p>
         <div className="flex flex-wrap justify-center gap-4">

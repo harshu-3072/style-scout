@@ -120,7 +120,7 @@ const About = () => {
       </section>
 
       {/* Story Section */}
-      <section className="py-24 bg-secondary/30">
+      <section className="py-24 bg-secondary/30 dark:bg-secondary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <h2 className="font-display text-4xl font-bold text-center mb-12">

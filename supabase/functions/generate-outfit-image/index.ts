@@ -6,6 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function callGeminiWithRetry(url: string, body: string, maxRetries = 3): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+
+    if (response.status === 429 && attempt < maxRetries) {
+      const delay = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
+      console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise((r) => setTimeout(r, delay));
+      continue;
+    }
+
+    return response;
+  }
+  throw new Error("Max retries exceeded");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,16 +72,14 @@ TECHNICAL:
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
 
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-        },
-      }),
+    const requestBody = JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ["IMAGE", "TEXT"],
+      },
     });
+
+    const response = await callGeminiWithRetry(geminiUrl, requestBody);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -79,7 +97,6 @@ TECHNICAL:
 
     if (!parts) throw new Error("No image was generated");
 
-    // Find the image part
     const imagePart = parts.find((p: any) => p.inlineData);
     if (!imagePart?.inlineData) {
       throw new Error("No image was generated");

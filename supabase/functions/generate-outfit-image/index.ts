@@ -6,6 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_ROUNDS = 3;
+const BASE_DELAY_MS = 1200;
+
 function getGeminiKeys(): string[] {
   const keys: string[] = [];
   const names = ["GOOGLE_GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY_2", "GOOGLE_GEMINI_API_KEY_3"];
@@ -16,6 +19,27 @@ function getGeminiKeys(): string[] {
   return keys;
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRetryDelayMs(response: Response, round: number) {
+  const retryAfter = response.headers.get("retry-after");
+  const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return Math.min(retryAfterSeconds * 1000, 15000);
+  }
+
+  return Math.min(BASE_DELAY_MS * 2 ** round, 10000);
+}
+
+function rotateKeys(keys: string[]) {
+  if (keys.length <= 1) return keys;
+  const offset = Math.floor(Math.random() * keys.length);
+  return [...keys.slice(offset), ...keys.slice(0, offset)];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,7 +48,7 @@ serve(async (req) => {
   try {
     const { outfitName, items, gender } = await req.json();
 
-    const geminiKeys = getGeminiKeys();
+    const geminiKeys = rotateKeys(getGeminiKeys());
     if (geminiKeys.length === 0) throw new Error("No Gemini API keys configured");
 
     const itemDescriptions = items
@@ -65,50 +89,69 @@ TECHNICAL:
       generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
     });
 
-    // Try each key in sequence until one succeeds
     let lastError = "";
-    for (let i = 0; i < geminiKeys.length; i++) {
-      const key = geminiKeys[i];
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`;
+    let sawRateLimit = false;
 
-      console.log(`Trying Gemini key ${i + 1}/${geminiKeys.length}`);
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      let roundWasRateLimited = false;
 
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
+      for (let i = 0; i < geminiKeys.length; i++) {
+        const key = geminiKeys[i];
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`;
 
-      if (response.status === 429) {
-        lastError = "Rate limit exceeded";
-        console.log(`Key ${i + 1} rate limited, trying next...`);
-        await response.text(); // consume body
-        continue;
+        console.log(`Trying Gemini key ${i + 1}/${geminiKeys.length} in round ${round + 1}/${MAX_ROUNDS}`);
+
+        const response = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+
+        if (response.status === 429) {
+          sawRateLimit = true;
+          roundWasRateLimited = true;
+          lastError = "Rate limit exceeded";
+          console.log(`Key ${i + 1} rate limited in round ${round + 1}, trying next...`);
+          await response.text();
+          continue;
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          lastError = `API error ${response.status}`;
+          console.error(`Key ${i + 1} error:`, response.status, errorText);
+          continue;
+        }
+
+        const data = await response.json();
+        const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+
+        if (!imagePart?.inlineData) {
+          lastError = "No image generated";
+          console.log(`Key ${i + 1} returned no image, trying next...`);
+          continue;
+        }
+
+        const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+        return new Response(JSON.stringify({ imageUrl }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        lastError = `API error ${response.status}`;
-        console.error(`Key ${i + 1} error:`, response.status, errorText);
-        continue;
+      if (roundWasRateLimited && round < MAX_ROUNDS - 1) {
+        const waitMs = getRetryDelayMs(new Response(null), round);
+        console.log(`All keys were rate limited in round ${round + 1}. Waiting ${waitMs}ms before retrying...`);
+        await delay(waitMs);
       }
+    }
 
-      const data = await response.json();
-      const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-
-      if (!imagePart?.inlineData) {
-        lastError = "No image generated";
-        console.log(`Key ${i + 1} returned no image, trying next...`);
-        continue;
-      }
-
-      const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
-      return new Response(JSON.stringify({ imageUrl }), {
+    if (sawRateLimit && lastError === "Rate limit exceeded") {
+      return new Response(JSON.stringify({ error: "All image-generation keys are temporarily rate limited. Please try again in a few seconds." }), {
+        status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // All keys exhausted
     throw new Error(`All ${geminiKeys.length} API keys failed. Last error: ${lastError}`);
   } catch (error) {
     console.error("generate-outfit-image error:", error);

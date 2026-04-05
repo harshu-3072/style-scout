@@ -6,6 +6,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function getGeminiKeys(): string[] {
+  const keys: string[] = [];
+  const names = ["GOOGLE_GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY_2", "GOOGLE_GEMINI_API_KEY_3"];
+  for (const name of names) {
+    const val = Deno.env.get(name);
+    if (val) keys.push(val);
+  }
+  return keys;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,8 +24,8 @@ serve(async (req) => {
   try {
     const { outfitName, items, gender } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    const geminiKeys = getGeminiKeys();
+    if (geminiKeys.length === 0) throw new Error("No Gemini API keys configured");
 
     const itemDescriptions = items
       .map((item: any) => `${item.type}: ${item.name}`)
@@ -50,78 +60,56 @@ TECHNICAL:
 - Magazine-quality editorial fashion photography
 - Absolutely NO text, watermarks, logos, or overlays`;
 
-    // Try Lovable AI Gateway first, fall back to direct Google API
-    let imageUrl: string | null = null;
-
-    if (LOVABLE_API_KEY) {
-      try {
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["image", "text"],
-          }),
-        });
-
-        if (resp.ok) {
-          const data = await resp.json();
-          const img = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-          if (img) imageUrl = img;
-        } else {
-          const errText = await resp.text();
-          console.error("Lovable gateway error:", resp.status, errText);
-        }
-      } catch (e) {
-        console.error("Lovable gateway failed:", e);
-      }
-    }
-
-    // Fallback to direct Google API
-    if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
-
-      for (let attempt = 0; attempt <= 3; attempt++) {
-        const response = await fetch(geminiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-          }),
-        });
-
-        if (response.status === 429 && attempt < 3) {
-          const delay = [15000, 30000, 45000][attempt];
-          console.log(`Rate limited, retrying in ${delay / 1000}s (attempt ${attempt + 1}/3)`);
-          await new Promise((r) => setTimeout(r, delay));
-          continue;
-        }
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Gemini error:", response.status, errorText);
-          throw new Error(`Image generation failed: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-        if (imagePart?.inlineData) {
-          imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
-        }
-        break;
-      }
-    }
-
-    if (!imageUrl) throw new Error("No image was generated");
-
-    return new Response(JSON.stringify({ imageUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const requestBody = JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
     });
+
+    // Try each key in sequence until one succeeds
+    let lastError = "";
+    for (let i = 0; i < geminiKeys.length; i++) {
+      const key = geminiKeys[i];
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`;
+
+      console.log(`Trying Gemini key ${i + 1}/${geminiKeys.length}`);
+
+      const response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+
+      if (response.status === 429) {
+        lastError = "Rate limit exceeded";
+        console.log(`Key ${i + 1} rate limited, trying next...`);
+        await response.text(); // consume body
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = `API error ${response.status}`;
+        console.error(`Key ${i + 1} error:`, response.status, errorText);
+        continue;
+      }
+
+      const data = await response.json();
+      const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+
+      if (!imagePart?.inlineData) {
+        lastError = "No image generated";
+        console.log(`Key ${i + 1} returned no image, trying next...`);
+        continue;
+      }
+
+      const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+      return new Response(JSON.stringify({ imageUrl }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // All keys exhausted
+    throw new Error(`All ${geminiKeys.length} API keys failed. Last error: ${lastError}`);
   } catch (error) {
     console.error("generate-outfit-image error:", error);
     const msg = error instanceof Error ? error.message : "Unknown error";

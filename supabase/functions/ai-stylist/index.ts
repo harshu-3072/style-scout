@@ -14,8 +14,8 @@ serve(async (req) => {
   try {
     const { messages, wardrobe } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
 
     let systemPrompt = `You are StyleGenie — a world-class personal AI fashion stylist and designer. You speak with warmth, expertise, and enthusiasm. You give specific, actionable fashion advice.
 
@@ -44,7 +44,6 @@ IMPORTANT FORMATTING RULES:
 - Keep responses conversational but informative.
 - If the user shares an image, analyze the garment and suggest styling options or alternatives.`;
 
-    // Inject wardrobe context if available
     if (wardrobe && Array.isArray(wardrobe) && wardrobe.length > 0) {
       const wardrobeList = wardrobe.map((item: any) =>
         `- ${item.category}: ${item.name}${item.color ? ` (${item.color})` : ""}${item.brand ? ` by ${item.brand}` : ""}`
@@ -52,56 +51,101 @@ IMPORTANT FORMATTING RULES:
       systemPrompt += `\n\n## USER'S WARDROBE (items they already own):\n${wardrobeList}\n\nWhen suggesting outfits, try to incorporate items from their wardrobe first, then suggest new purchases to complement.`;
     }
 
-    // Build messages array
-    const aiMessages: any[] = [
-      { role: "system", content: systemPrompt },
-    ];
+    // Build Gemini contents array
+    const contents: any[] = [];
 
+    // Add system instruction via the first user turn context
     for (const msg of messages) {
       if (msg.role === "user" && msg.imageBase64) {
         const base64Data = msg.imageBase64.replace(/^data:image\/\w+;base64,/, "");
-        aiMessages.push({
+        const mimeMatch = msg.imageBase64.match(/^data:(image\/\w+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        contents.push({
           role: "user",
-          content: [
-            { type: "text", text: msg.content || "Analyze this outfit and suggest how to style it or suggest better alternatives." },
-            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Data}` } },
+          parts: [
+            { text: msg.content || "Analyze this outfit and suggest how to style it or suggest better alternatives." },
+            { inlineData: { mimeType, data: base64Data } },
           ],
         });
       } else {
-        aiMessages.push({ role: msg.role, content: msg.content });
+        contents.push({
+          role: msg.role === "assistant" ? "model" : "user",
+          parts: [{ text: msg.content }],
+        });
       }
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
+
+    const response = await fetch(geminiUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: aiMessages,
-        stream: true,
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents,
       }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API error:", response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
-    return new Response(response.body, {
+    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    (async () => {
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIdx;
+          while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, newlineIdx).trim();
+            buffer = buffer.slice(newlineIdx + 1);
+
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6);
+            if (jsonStr === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                // Convert to OpenAI-compatible SSE format
+                const chunk = JSON.stringify({
+                  choices: [{ delta: { content: text } }],
+                });
+                await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+              }
+            } catch {
+              // skip unparseable lines
+            }
+          }
+        }
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+      } catch (e) {
+        console.error("Stream processing error:", e);
+      } finally {
+        writer.close();
+      }
+    })();
+
+    return new Response(readable, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {

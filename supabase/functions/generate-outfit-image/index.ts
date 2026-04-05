@@ -50,7 +50,7 @@ TECHNICAL:
 - Magazine-quality editorial fashion photography
 - Absolutely NO text, watermarks, logos, or overlays`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image-generation:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {
       method: "POST",

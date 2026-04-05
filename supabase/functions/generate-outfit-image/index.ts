@@ -85,7 +85,7 @@ TECHNICAL:
     if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
 
-      for (let attempt = 0; attempt <= 2; attempt++) {
+      for (let attempt = 0; attempt <= 3; attempt++) {
         const response = await fetch(geminiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

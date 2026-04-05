@@ -95,9 +95,9 @@ TECHNICAL:
           }),
         });
 
-        if (response.status === 429 && attempt < 2) {
-          const delay = Math.pow(2, attempt + 1) * 1000;
-          console.log(`Rate limited, retrying in ${delay}ms`);
+        if (response.status === 429 && attempt < 3) {
+          const delay = [15000, 30000, 45000][attempt];
+          console.log(`Rate limited, retrying in ${delay / 1000}s (attempt ${attempt + 1}/3)`);
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }

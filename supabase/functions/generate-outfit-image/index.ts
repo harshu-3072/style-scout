@@ -11,7 +11,7 @@ const BASE_DELAY_MS = 1200;
 
 function getGeminiKeys(): string[] {
   const keys: string[] = [];
-  const names = ["GOOGLE_GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY_2", "GOOGLE_GEMINI_API_KEY_3"];
+  const names = ["GOOGLE_GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY_2", "GOOGLE_GEMINI_API_KEY_3", "GOOGLE_GEMINI_API_KEY_4", "GOOGLE_GEMINI_API_KEY_5"];
   for (const name of names) {
     const val = Deno.env.get(name);
     if (val) keys.push(val);

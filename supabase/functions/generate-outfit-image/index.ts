@@ -200,8 +200,12 @@ TECHNICAL:
         ? `The ${validKeyCount} valid image-generation key(s) are temporarily rate limited. ${invalidKeyNames.size} configured key(s) are invalid and should be replaced.`
         : "All image-generation keys are temporarily rate limited. Please try again in a few seconds.";
 
-      return new Response(JSON.stringify({ error: errorMessage }), {
-        status: 429,
+      return new Response(JSON.stringify({
+        imageUrl: null,
+        temporarilyUnavailable: true,
+        retryAfterMs: getRetryDelayMs(null, MAX_ROUNDS - 1),
+        message: errorMessage,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

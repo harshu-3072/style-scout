@@ -6,15 +6,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_ROUNDS = 3;
+const MAX_ROUNDS = 5;
 const BASE_DELAY_MS = 1200;
 
-function getGeminiKeys(): string[] {
-  const keys: string[] = [];
+type GeminiKey = {
+  name: string;
+  value: string;
+};
+
+function getGeminiKeys(): GeminiKey[] {
+  const keys: GeminiKey[] = [];
   const names = ["GOOGLE_GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY_2", "GOOGLE_GEMINI_API_KEY_3", "GOOGLE_GEMINI_API_KEY_4", "GOOGLE_GEMINI_API_KEY_5"];
   for (const name of names) {
     const val = Deno.env.get(name);
-    if (val) keys.push(val);
+    if (val) keys.push({ name, value: val });
   }
   return keys;
 }
@@ -23,21 +28,33 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getRetryDelayMs(response: Response, round: number) {
-  const retryAfter = response.headers.get("retry-after");
+function getRetryDelayMs(response: Response | null, round: number) {
+  const retryAfter = response?.headers.get("retry-after") ?? null;
   const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
 
   if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
     return Math.min(retryAfterSeconds * 1000, 15000);
   }
 
+  const retryAfterDateMs = retryAfter ? Date.parse(retryAfter) - Date.now() : NaN;
+  if (Number.isFinite(retryAfterDateMs) && retryAfterDateMs > 0) {
+    return Math.min(retryAfterDateMs, 15000);
+  }
+
   return Math.min(BASE_DELAY_MS * 2 ** round, 10000);
 }
 
-function rotateKeys(keys: string[]) {
+function rotateKeys<T>(keys: T[]) {
   if (keys.length <= 1) return keys;
   const offset = Math.floor(Math.random() * keys.length);
   return [...keys.slice(offset), ...keys.slice(0, offset)];
+}
+
+function isInvalidGeminiKey(status: number, errorText: string) {
+  if (status !== 400 && status !== 403) return false;
+
+  const normalizedError = errorText.toUpperCase();
+  return normalizedError.includes("API_KEY_INVALID") || normalizedError.includes("API KEY NOT VALID");
 }
 
 serve(async (req) => {
@@ -50,6 +67,7 @@ serve(async (req) => {
 
     const geminiKeys = rotateKeys(getGeminiKeys());
     if (geminiKeys.length === 0) throw new Error("No Gemini API keys configured");
+    let activeKeys = [...geminiKeys];
 
     const itemDescriptions = items
       .map((item: any) => `${item.type}: ${item.name}`)
@@ -91,15 +109,20 @@ TECHNICAL:
 
     let lastError = "";
     let sawRateLimit = false;
+    const invalidKeyNames = new Set<string>();
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
+      if (activeKeys.length === 0) break;
+
       let roundWasRateLimited = false;
+      let retryDelayMs = 0;
+      const nextRoundKeys: GeminiKey[] = [];
 
-      for (let i = 0; i < geminiKeys.length; i++) {
-        const key = geminiKeys[i];
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`;
+      for (let i = 0; i < activeKeys.length; i++) {
+        const key = activeKeys[i];
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key.value}`;
 
-        console.log(`Trying Gemini key ${i + 1}/${geminiKeys.length} in round ${round + 1}/${MAX_ROUNDS}`);
+        console.log(`Trying Gemini key ${i + 1}/${activeKeys.length} in round ${round + 1}/${MAX_ROUNDS}`);
 
         const response = await fetch(geminiUrl, {
           method: "POST",
@@ -111,15 +134,30 @@ TECHNICAL:
           sawRateLimit = true;
           roundWasRateLimited = true;
           lastError = "Rate limit exceeded";
+          retryDelayMs = Math.max(retryDelayMs, getRetryDelayMs(response, round));
           console.log(`Key ${i + 1} rate limited in round ${round + 1}, trying next...`);
           await response.text();
+          nextRoundKeys.push(key);
           continue;
         }
 
         if (!response.ok) {
           const errorText = await response.text();
+
+          if (isInvalidGeminiKey(response.status, errorText)) {
+            invalidKeyNames.add(key.name);
+            lastError = `Invalid API key: ${key.name}`;
+            console.error(`Key ${i + 1} (${key.name}) is invalid and will be skipped for the rest of this request.`, response.status, errorText);
+            continue;
+          }
+
           lastError = `API error ${response.status}`;
-          console.error(`Key ${i + 1} error:`, response.status, errorText);
+          console.error(`Key ${i + 1} (${key.name}) error:`, response.status, errorText);
+
+          if (response.status >= 500) {
+            nextRoundKeys.push(key);
+          }
+
           continue;
         }
 
@@ -129,6 +167,7 @@ TECHNICAL:
         if (!imagePart?.inlineData) {
           lastError = "No image generated";
           console.log(`Key ${i + 1} returned no image, trying next...`);
+          nextRoundKeys.push(key);
           continue;
         }
 
@@ -138,21 +177,36 @@ TECHNICAL:
         });
       }
 
-      if (roundWasRateLimited && round < MAX_ROUNDS - 1) {
-        const waitMs = getRetryDelayMs(new Response(null), round);
-        console.log(`All keys were rate limited in round ${round + 1}. Waiting ${waitMs}ms before retrying...`);
+      activeKeys = rotateKeys(nextRoundKeys);
+
+      if (roundWasRateLimited && round < MAX_ROUNDS - 1 && activeKeys.length > 0) {
+        const waitMs = retryDelayMs || getRetryDelayMs(null, round);
+        console.log(`Waiting ${waitMs}ms before retrying ${activeKeys.length} remaining key(s)...`);
         await delay(waitMs);
       }
     }
 
+    const validKeyCount = geminiKeys.length - invalidKeyNames.size;
+
+    if (validKeyCount === 0) {
+      return new Response(JSON.stringify({ error: "No valid Gemini image-generation API keys are configured. Please replace the invalid keys." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (sawRateLimit && lastError === "Rate limit exceeded") {
-      return new Response(JSON.stringify({ error: "All image-generation keys are temporarily rate limited. Please try again in a few seconds." }), {
+      const errorMessage = invalidKeyNames.size > 0
+        ? `The ${validKeyCount} valid image-generation key(s) are temporarily rate limited. ${invalidKeyNames.size} configured key(s) are invalid and should be replaced.`
+        : "All image-generation keys are temporarily rate limited. Please try again in a few seconds.";
+
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    throw new Error(`All ${geminiKeys.length} API keys failed. Last error: ${lastError}`);
+    throw new Error(`All ${validKeyCount} valid API keys failed. Last error: ${lastError}`);
   } catch (error) {
     console.error("generate-outfit-image error:", error);
     const msg = error instanceof Error ? error.message : "Unknown error";

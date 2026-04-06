@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ImageIcon, Loader2, X, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { ParsedOutfit } from "./OutfitCard";
 
@@ -25,10 +24,12 @@ export function OutfitImagePreview({ outfit, gender }: OutfitImagePreviewProps) 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const generateImage = async () => {
     setIsGenerating(true);
     setRetryMessage(null);
+    setStatusMessage(null);
 
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-outfit-image`;
@@ -47,15 +48,26 @@ export function OutfitImagePreview({ outfit, gender }: OutfitImagePreviewProps) 
           }),
         });
 
-        if (resp.ok) {
-          const data = await resp.json();
+        const data = await resp.json().catch(() => ({}));
+
+        if (resp.ok && data?.imageUrl) {
           setImageUrl(data.imageUrl);
           setRetryMessage(null);
+          setStatusMessage(null);
           return;
         }
 
-        const err = await resp.json().catch(() => ({ error: "Image generation failed" }));
-        const errorMessage = err.error || "Image generation failed";
+        if (resp.ok && data?.temporarilyUnavailable) {
+          const message = data.message || "Image generation is temporarily busy. Please try again shortly.";
+          setStatusMessage(message);
+          toast({
+            title: "Image preview delayed",
+            description: message,
+          });
+          return;
+        }
+
+        const errorMessage = data?.error || data?.message || "Image generation failed";
 
         if (resp.status === 429 && attempt < MAX_CLIENT_RETRIES) {
           const waitMs = getClientRetryDelayMs(attempt + 1);
@@ -84,13 +96,18 @@ export function OutfitImagePreview({ outfit, gender }: OutfitImagePreviewProps) 
 
   if (!imageUrl && !isGenerating) {
     return (
-      <button
-        onClick={generateImage}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border hover:border-gold/50 hover:bg-gold/5 text-muted-foreground hover:text-gold transition-all duration-200 text-xs font-medium"
-      >
-        <ImageIcon className="w-3.5 h-3.5" />
-        Generate Outfit Preview
-      </button>
+      <div className="space-y-2">
+        <button
+          onClick={generateImage}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border hover:border-gold/50 hover:bg-gold/5 text-muted-foreground hover:text-gold transition-all duration-200 text-xs font-medium"
+        >
+          <ImageIcon className="w-3.5 h-3.5" />
+          Generate Outfit Preview
+        </button>
+        {statusMessage && (
+          <p className="text-[11px] text-muted-foreground text-center px-2">{statusMessage}</p>
+        )}
+      </div>
     );
   }
 
